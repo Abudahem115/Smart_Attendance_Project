@@ -30,7 +30,13 @@ def start_recognition_camera():
     print("📷 Camera Started.")
     print("ℹ️  To Exit: Press 'q', 'ESC', or click the 'X' button on the window.")
     
-    video_capture = cv2.VideoCapture(0)
+    # Open camera with V4L2 backend (specifically for Pi)
+    video_capture = cv2.VideoCapture(0, cv2.CAP_V4L2)
+    
+    # Set Resolution and Format to avoid libcamerify crash
+    video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    video_capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
     window_name = 'Smart Attendance System'
 
     while True:
