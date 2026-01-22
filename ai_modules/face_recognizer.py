@@ -4,17 +4,87 @@ import face_recognition
 import numpy as np
 import sys
 import os
+from os import environ
 
 # Add project path for database modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from database_modules.employee_crud import get_all_employees
-from database_modules.attendance_logger import mark_attendance
+try:
+    from database_modules.employee_crud import get_all_employees
+    from database_modules.attendance_logger import mark_attendance
+except ImportError as e:
+    print(f"❌ Import Error: {e}")
+    print("Ensure you are running from the project root.")
+    sys.exit(1)
+
+def get_camera():
+    """
+    Try to open camera using different backends.
+    Best for Raspberry Pi Bookworm is GStreamer or V4L2 via libcamerify.
+    """
+    # 1. Try GStreamer (Native Libcamera support)
+    print("📷 Attempting GStreamer connection...")
+    gst_pipeline = (
+        "libcamerasrc ! video/x-raw, width=640, height=480, framerate=15/1 ! "
+        "videoconvert ! video/x-raw, format=BGR ! appsink drop=1"
+    )
+    cap = cv2.VideoCapture(gst_pipeline, cv2.CAP_GSTREAMER)
+    if cap.isOpened():
+        ret, _ = cap.read()
+        if ret:
+            print("✅ GStreamer backend works!")
+            return cap
+    cap.release()
+
+    # 2. Try V4L2 (Standard for libcamerify)
+    print("📷 Attempting V4L2 connection...")
+    # Using specific index -1 to let OpenCV choose best V4L2 device
+    cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
+    # Set safe common resolution
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    if cap.isOpened():
+        ret, _ = cap.read()
+        if ret:
+            print("✅ V4L2 backend works!")
+            return cap
+    cap.release()
+
+    # 3. Try Default (Fallback)
+    print("📷 Attempting Default connection...")
+    cap = cv2.VideoCapture(0)
+    if cap.isOpened():
+        ret, _ = cap.read()
+        if ret:
+            print("✅ Default backend works!")
+            return cap
+            
+    return None
 
 def start_recognition_camera():
+    # 1. Check Credentials FIRST
+    url = environ.get('SUPABASE_URL')
+    key = environ.get('SUPABASE_KEY')
+    
+    if not url or not key:
+        print("\n❌ CRITICAL ERROR: Supabase credentials missing from environment!")
+        print(f"   URL: {'[SET]' if url else '[MISSING]'}")
+        print(f"   KEY: {'[SET]' if key else '[MISSING]'}")
+        print("➡️  Please edit your .env file: 'nano .env'")
+        return
+
+    if "your_url_here" in url or "http" not in url:
+        print(f"\n❌ CRITICAL ERROR: Invalid Supabase URL: '{url}'")
+        print("➡️  It normally starts with 'https://' and looks like 'https://xyz.supabase.co'")
+        return
+
     # Loading message
     print("⏳ Loading employee data from database...")
     
-    employees_data = get_all_employees()
+    try:
+        employees_data = get_all_employees()
+    except Exception as e:
+        print(f"❌ Database Error: {e}")
+        return
     
     known_face_encodings = []
     known_face_names = []
@@ -27,16 +97,18 @@ def start_recognition_camera():
         known_face_ids.append(employee['id'])
     
     print(f"✅ System Ready: Loaded {len(known_face_names)} employees.")
+    
+    # 2. Initialize Camera
+    video_capture = get_camera()
+    
+    if video_capture is None or not video_capture.isOpened():
+        print("❌ CRITICAL ERROR: Could not open any camera.")
+        print("ℹ️  Try running with: libcamerify python start_system.py")
+        return
+
     print("📷 Camera Started.")
     print("ℹ️  To Exit: Press 'q', 'ESC', or click the 'X' button on the window.")
     
-    # Open camera with V4L2 backend (specifically for Pi)
-    video_capture = cv2.VideoCapture(0, cv2.CAP_V4L2)
-    
-    # Set Resolution and Format to avoid libcamerify crash
-    video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    video_capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
     window_name = 'Smart Attendance System'
 
     while True:
@@ -47,8 +119,11 @@ def start_recognition_camera():
             break
 
         # Resize for speed
-        small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-        
+        try:
+            small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+        except Exception:
+            continue
+            
         # Color conversion BGR -> RGB
         rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
 
