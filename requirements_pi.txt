@@ -1,0 +1,10 @@
+# Core AI/CV dependencies
+# Note: dlib and opencv are best installed via system packages or pre-built wheels on Pi
+# to avoid long compilation times, but we list them here for completeness.
+# Ideally install python3-opencv and python3-dlib from apt if available, or use pip.
+
+face-recognition
+numpy
+# opencv-python # Often better to use system package `python3-opencv` on Pi
+click
+colorama

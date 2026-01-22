@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Add New Employee - Manual Capture</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <style>
+        #camera-section {
+            display: none;
+        }
+
+        #video {
+            border: 2px solid #333;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .thumb-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .thumb-img {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            border: 2px solid #28a745;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                🏫 <span>HR Attendance</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto gap-2">
+                    <li class="nav-item"><a class="nav-link" href="/">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/employees">Employees</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/add_employee">Add Employee</a></li>
+                    <li class="nav-item ms-md-3">
+                        <a class="btn btn-danger btn-sm d-flex align-items-center gap-2 px-3 h-100" href="/logout">
+                            <span>Logout</span> 🔒
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5 mb-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">➕ Register New Employee</h4>
+                    </div>
+                    <div class="card-body">
+
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                        {% endif %}
+                        {% endwith %}
+
+                        <form method="POST" action="/add_employee" enctype="multipart/form-data" id="studentForm">
+                            <div class="mb-3">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" name="name" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Employee ID / Code</label>
+                                <input type="text" name="code" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email Address</label>
+                                <input type="email" name="email" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Department</label>
+                                <select name="department" class="form-select">
+                                    <option value="General">General</option>
+                                    <option value="IT">IT</option>
+                                    <option value="HR">HR</option>
+                                    <option value="Sales">Sales</option>
+                                    <option value="Marketing">Marketing</option>
+                                </select>
+                            </div>
+
+                            <hr>
+                            <label class="form-label fw-bold">Training Data</label>
+                            <div class="d-flex gap-2 mb-3">
+                                <button type="button" class="btn btn-outline-primary" onclick="showUpload()">📁 Upload
+                                    Files</button>
+                                <button type="button" class="btn btn-outline-success" onclick="showCamera()">📷 Live
+                                    Capture</button>
+                            </div>
+
+                            <div id="upload-section" class="mb-3">
+                                <label class="form-label">Upload multiple photos</label>
+                                <input type="file" name="photos" class="form-control" accept="image/*" multiple>
+                            </div>
+
+                            <div id="camera-section" class="text-center mb-3">
+                                <div class="alert alert-info">
+                                    💡 <strong>Instructions:</strong> Click the button 5 times. Change your angle
+                                    slightly each time.
+                                </div>
+                                <video id="video" autoplay playsinline></video>
+                                <br>
+
+                                <button type="button" class="btn btn-warning mt-2 px-5" id="snapBtn"
+                                    onclick="captureManual()">
+                                    📸 Snap Photo (0/5)
+                                </button>
+                                <button type="button" class="btn btn-secondary mt-2" onclick="resetCapture()">🔄
+                                    Reset</button>
+
+                                <canvas id="canvas" width="640" height="480"></canvas>
+
+                                <div id="thumbnails-preview" class="thumb-container"></div>
+
+                                <div id="hidden-inputs-container"></div>
+                            </div>
+
+                            <div class="d-grid mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">Save
+                                    Employee</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const thumbContainer = document.getElementById('thumbnails-preview');
+        const hiddenInputsContainer = document.getElementById('hidden-inputs-container');
+        const snapBtn = document.getElementById('snapBtn');
+
+        let stream = null;
+        let captureCount = 0;
+        const maxCaptures = 5;
+
+        function showUpload() {
+            document.getElementById('upload-section').style.display = 'block';
+            document.getElementById('camera-section').style.display = 'none';
+            stopCamera();
+        }
+
+        function showCamera() {
+            document.getElementById('upload-section').style.display = 'none';
+            document.getElementById('camera-section').style.display = 'block';
+            startCamera();
+        }
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                resetCapture();
+            } catch (err) {
+                alert("Error accessing camera: " + err);
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+        }
+
+        function resetCapture() {
+            captureCount = 0;
+            thumbContainer.innerHTML = '';
+            hiddenInputsContainer.innerHTML = '';
+            snapBtn.innerText = `📸 Snap Photo (0/${maxCaptures})`;
+            snapBtn.disabled = false;
+            snapBtn.classList.remove('btn-success');
+            snapBtn.classList.add('btn-warning');
+        }
+
+        // هذه الدالة تعمل عند ضغط الزر يدوياً
+        function captureManual() {
+            if (captureCount >= maxCaptures) return;
+
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataURL = canvas.toDataURL('image/jpeg');
+
+            // زيادة العداد
+            captureCount++;
+
+            // إضافة صورة مصغرة
+            const img = document.createElement('img');
+            img.src = dataURL;
+            img.className = 'thumb-img';
+            thumbContainer.appendChild(img);
+
+            // إضافة حقل مخفي
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'captured_photos';
+            input.value = dataURL;
+            hiddenInputsContainer.appendChild(input);
+
+            // تحديث حالة الزر
+            if (captureCount < maxCaptures) {
+                snapBtn.innerText = `📸 Snap Photo (${captureCount}/${maxCaptures})`;
+            } else {
+                snapBtn.innerText = `✅ Done (${maxCaptures} Photos)`;
+                snapBtn.disabled = true; // تعطيل الزر عند الوصول للحد الأقصى
+                snapBtn.classList.remove('btn-warning');
+                snapBtn.classList.add('btn-success');
+            }
+        }
+    </script>
+
+</body>
+
+</html>

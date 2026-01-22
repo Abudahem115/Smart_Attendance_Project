@@ -1,0 +1,196 @@
+/* Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+:root {
+    --primary-color: #4361ee;
+    --secondary-color: #3f37c9;
+    --accent-color: #4895ef;
+    --success-color: #2ec4b6;
+    --danger-color: #e63946;
+    --warning-color: #fca311;
+    --dark-bg: #0f172a;
+    --card-bg: rgba(30, 41, 59, 0.7);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body {
+    background: var(--dark-bg);
+    background-image: radial-gradient(circle at 10% 20%, rgba(67, 97, 238, 0.15) 0%, transparent 20%),
+        radial-gradient(circle at 90% 80%, rgba(46, 196, 182, 0.15) 0%, transparent 20%);
+    font-family: 'Outfit', sans-serif;
+    color: var(--text-main);
+    min-height: 100vh;
+}
+
+/* Glassmorphism Cards */
+.card,
+.modal-content {
+    background: var(--card-bg) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: var(--glass-border) !important;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3) !important;
+    border-radius: 16px !important;
+    color: var(--text-main) !important;
+}
+
+.card-header {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-bottom: var(--glass-border) !important;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Navbar */
+.navbar {
+    background: rgba(15, 23, 42, 0.8) !important;
+    backdrop-filter: blur(15px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+    padding: 1rem 0;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: #fff !important;
+}
+
+.nav-link {
+    color: var(--text-muted) !important;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    padding: 0.5rem 1rem !important;
+    border-radius: 8px;
+    margin-left: 5px;
+}
+
+.nav-link:hover,
+.nav-link.active {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 700;
+    background: linear-gradient(90deg, #fff, #94a3b8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Buttons */
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.4);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.6);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success-color), #20a094) !important;
+    border: none !important;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--danger-color), #bc2834) !important;
+    border: none !important;
+}
+
+/* Tables */
+.table {
+    color: var(--text-main) !important;
+}
+
+.table thead th {
+    background: rgba(0, 0, 0, 0.3) !important;
+    color: var(--accent-color) !important;
+    border-bottom: var(--glass-border) !important;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+}
+
+.table td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Forms */
+.form-control,
+.form-select {
+    background: rgba(15, 23, 42, 0.6) !important;
+    border: var(--glass-border) !important;
+    color: #fff !important;
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.3) !important;
+    border-color: var(--primary-color) !important;
+}
+
+.form-label {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+}
+
+/* Video/Canvas */
+#video,
+#canvas {
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.thumb-img {
+    border-color: var(--success-color) !important;
+    box-shadow: 0 0 10px rgba(46, 196, 182, 0.3);
+}
+
+/* Utilities */
+.text-muted {
+    color: #94a3b8 !important;
+}
+
+.stat-card-icon {
+    font-size: 3rem;
+    margin-bottom: 10px;
+    opacity: 0.8;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--dark-bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
