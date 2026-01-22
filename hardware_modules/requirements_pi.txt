@@ -3,8 +3,13 @@
 # to avoid long compilation times, but we list them here for completeness.
 # Ideally install python3-opencv and python3-dlib from apt if available, or use pip.
 
+
 face-recognition
 numpy
 # opencv-python # Often better to use system package `python3-opencv` on Pi
 click
 colorama
+Flask
+waitress
+supabase
+python-dotenv

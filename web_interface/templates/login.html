@@ -9,10 +9,11 @@
     <style>
         .login-card {
             width: 100%;
-            max-width: 400px;
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 100px;
+            max-width: 420px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            background: rgba(30, 41, 59, 0.6);
         }
 
         .brand-logo {
@@ -25,32 +26,42 @@
 
 <body>
 
-    <div class="card shadow login-card">
-        <div class="card-body">
-            <div class="brand-logo">🔒</div>
-            <h4 class="text-center mb-4">HR Admin Login</h4>
+    <div class="container d-flex justify-content-center align-items-center min-vh-100">
+        <div class="card shadow login-card">
+            <div class="card-body p-5">
+                <div class="brand-logo">🔒</div>
+                <h3 class="text-center mb-4">HR Admin Login</h3>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-            {% endif %}
-            {% endwith %}
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} fade show" role="alert">
+                    {{ message }}
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
 
-            <form method="POST">
-                <div class="mb-3">
-                    <label class="form-label">Username</label>
-                    <input type="text" name="username" class="form-control" required>
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" class="form-control form-control-lg"
+                            placeholder="Enter username" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control form-control-lg"
+                            placeholder="••••••••" required>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">Login</button>
+                    </div>
+                </form>
+
+                <div class="text-center mt-4 text-muted small">
+                    Smart Attendance System v2.0
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Password</label>
-                    <input type="password" name="password" class="form-control" required>
-                </div>
-                <div class="d-grid">
-                    <button type="submit" class="btn btn-primary btn-lg">Login</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 

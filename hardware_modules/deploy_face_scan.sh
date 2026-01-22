@@ -25,26 +25,45 @@ sudo apt-get install -y libgtk-3-dev libcanberra-gtk*
 # Mathematical optimizations
 sudo apt-get install -y libatlas-base-dev libopenblas-dev liblapack-dev
 
-# Python headers
-sudo apt-get install -y python3-dev
+# Python headers and venv
+sudo apt-get install -y python3-dev python3-venv
 
 # 3. Create Virtual Environment
 echo "🐍 Setting up Python Virtual Environment..."
+# Ensure permissions are correct for current directory
+sudo chown -R $USER:$USER .
+
 if [ ! -d "venv" ]; then
     python3 -m venv venv
-    echo "✅ Virtual environment created."
+    if [ $? -eq 0 ]; then
+        echo "✅ Virtual environment created."
+    else
+        echo "❌ Failed to create virtual environment. Trying to install python3-venv again..."
+        sudo apt-get install -y python3-venv
+        python3 -m venv venv
+        if [ $? -ne 0 ]; then
+            echo "❌ Critical Error: Could not create venv. Exiting."
+            exit 1
+        fi
+    fi
 else
     echo "ℹ️  Virtual environment already exists."
 fi
 
-# Activate venv
-source venv/bin/activate
+    echo "✅ Swap increased to 2048MB. Attempting installation now..."
+else
+    echo "✅ Swap space is sufficient ($SWAP_SIZE MB)."
+fi
+
+# Force single-core compilation for dlib to save RAM
+export MAKEFLAGS="-j1"
+echo "🐌 Set MAKEFLAGS='-j1' to reduce memory usage during compilation (this will be slower but safer)."
 
 # 4. Install Python Dependencies
 echo "📥 Installing Python libraries..."
 pip install --upgrade pip
 
-# Install numpy first
+# Install numpy first (sometimes helps avoid build issues)
 pip install numpy
 
 # Install OpenCV (headless often better for servers, but user wants imshow so we need GUI support)
@@ -61,7 +80,7 @@ if [ -f "requirements_pi.txt" ]; then
     pip install -r requirements_pi.txt
 else
     echo "⚠️ requirements_pi.txt not found, installing defaults..."
-    pip install click colorama
+    pip install click colorama supabase python-dotenv waitress
 fi
 
 echo "✅ Dependencies installed!"

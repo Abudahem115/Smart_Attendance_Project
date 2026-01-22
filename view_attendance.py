@@ -1,30 +1,43 @@
-# اسم الملف: view_attendance.py
-import sqlite3
+# name file: view_attendance.py
+from database_modules.supabase_client import get_supabase_client
 
 # Connect to database
-conn = sqlite3.connect("attendance_system.db")
-cursor = conn.cursor()
+supabase = get_supabase_client()
 
-print("\n--- 📋 HR Attendance Report (Today) ---")
+print("\n--- 📋 HR Attendance Report (Today & Recent) ---")
 
-# Fetch data joining attendance and employees
-sql = """
-SELECT employees.name, employees.employee_code, attendance.time, attendance.status
-FROM attendance
-JOIN employees ON attendance.employee_id = employees.id
-ORDER BY attendance.time DESC
-"""
+if not supabase:
+    print("❌ Error: Supabase connection failed.")
+    exit()
 
-cursor.execute(sql)
-rows = cursor.fetchall()
+try:
+    # Fetch data joining attendance and employees
+    # Note: Assuming 'employees' FK relationship exists on 'employee_id'
+    response = supabase.table("attendance") \
+        .select("time, status, employees(name, employee_code)") \
+        .order("time", desc=True) \
+        .limit(20) \
+        .execute()
+    
+    rows = response.data
 
-if len(rows) == 0:
-    print("No attendance records found yet.")
-else:
-    print(f"{'Name':<20} | {'ID':<10} | {'Time':<10} | {'Status'}")
-    print("-" * 55)
-    for row in rows:
-        print(f"{row[0]:<20} | {row[1]:<10} | {row[2]:<10} | {row[3]}")
+    if len(rows) == 0:
+        print("No attendance records found yet.")
+    else:
+        print(f"{'Name':<20} | {'ID':<10} | {'Time':<10} | {'Status'}")
+        print("-" * 55)
+        for row in rows:
+            emp = row.get('employees') or {}
+            name = emp.get('name', 'Unknown')
+            code = emp.get('employee_code', '-')
+            
+            # Truncate long names
+            if len(name) > 19:
+                name = name[:17] + ".."
+                
+            print(f"{name:<20} | {code:<10} | {row['time']:<10} | {row['status']}")
 
-conn.close()
+except Exception as e:
+    print(f"❌ Error fetching records: {e}")
+
 input("\nPress Enter to exit...")

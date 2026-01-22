@@ -1,6 +1,5 @@
-# اسم الملف: web_interface/app.py
+# File: web_interface/app.py
 from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
-import sqlite3
 import os
 import sys
 import face_recognition
@@ -11,13 +10,14 @@ import csv
 from io import StringIO
 from functools import wraps
 import datetime
+from collections import Counter
 
-# إعداد المسارات
+# Setup Paths
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_dir = os.path.dirname(current_dir)
 sys.path.append(project_dir)
 
-# Import Employee CRUD
+# Import Employee CRUD & Supabase Client
 from database_modules.employee_crud import (
     add_new_employee, 
     delete_employee_by_id, 
@@ -26,28 +26,20 @@ from database_modules.employee_crud import (
     get_all_employees
 )
 from database_modules.attendance_logger import mark_attendance
+from database_modules.supabase_client import get_supabase_client
 
-# إعداد التطبيق
+# App Config
 app = Flask(__name__)
-app.secret_key = "super_secret_key" # مفتاح لتشفير الجلسة (Session)
+app.secret_key = "super_secret_key"
 
-# إعداد المجلدات
+# Folder Config
 UPLOAD_FOLDER = os.path.join(current_dir, 'static', 'uploads')
 PROCESSED_FOLDER = os.path.join(current_dir, 'static', 'processed')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-DB_PATH = os.path.join(project_dir, "attendance_system.db")
-
-# --- Helper Functions ---
-
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-# --- Security Decorator (نظام الحماية) ---
+# --- Security Decorator ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -57,19 +49,23 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# --- Authentication Routes (تسجيل الدخول والخروج) ---
-
+# --- Authentication ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         
-        conn = get_db_connection()
+        supabase = get_supabase_client()
+        if not supabase:
+             flash('❌ Database connection error.', 'danger')
+             return render_template('login.html')
+
         try:
-            admin = conn.execute('SELECT * FROM admins WHERE username = ? AND password = ?', (username, password)).fetchone()
+            response = supabase.table('admins').select("*").eq('username', username).eq('password', password).execute()
             
-            if admin:
+            # response.data is a list
+            if response.data and len(response.data) > 0:
                 session['admin_logged_in'] = True
                 session['username'] = username
                 flash('✅ Welcome back, Admin!', 'success')
@@ -78,8 +74,6 @@ def login():
                 flash('❌ Invalid Username or Password', 'danger')
         except Exception as e:
             flash(f'Error: {e}', 'danger')
-        finally:
-            conn.close()
             
     return render_template('login.html')
 
@@ -89,42 +83,67 @@ def logout():
     flash('ℹ️ You have been logged out.', 'info')
     return redirect(url_for('login'))
 
-# --- Main Routes (الصفحات الرئيسية) ---
-
+# --- Main Routes ---
 @app.route('/')
 @login_required
 def index():
-    conn = get_db_connection()
-    
-    # 1. Last 10 attendance records
-    attendance_sql = """
-    SELECT employees.name, employees.employee_code, attendance.time, attendance.status
-    FROM attendance
-    JOIN employees ON attendance.employee_id = employees.id
-    ORDER BY attendance.id DESC LIMIT 10
-    """
-    attendance_data = conn.execute(attendance_sql).fetchall()
-    
-    # 2. عدد الحضور اليوم
-    count_sql = "SELECT count(*) FROM attendance WHERE date = date('now')"
-    today_count = conn.execute(count_sql).fetchone()[0]
-    
-    # 3. بيانات الرسم البياني (آخر 7 أيام)
-    chart_sql = """
-    SELECT date, COUNT(*) as count 
-    FROM attendance 
-    GROUP BY date 
-    ORDER BY date DESC 
-    LIMIT 7
-    """
-    chart_data = conn.execute(chart_sql).fetchall()
-    
-    # تنسيق البيانات للرسم البياني
-    chart_dates = [row['date'] for row in reversed(chart_data)]
-    chart_counts = [row['count'] for row in reversed(chart_data)]
-    
-    conn.close()
-    
+    supabase = get_supabase_client()
+    attendance_data = []
+    today_count = 0
+    chart_dates = []
+    chart_counts = []
+
+    if supabase:
+        try:
+            # 1. Last 10 records
+            # Note: This assumes a foreign key 'employee_id' in 'attendance' points to 'employees.id'
+            att_response = supabase.table("attendance") \
+                .select("*, employees(name, employee_code)") \
+                .order("id", desc=True) \
+                .limit(10) \
+                .execute()
+            
+            raw_data = att_response.data
+            
+            # Flatten/Clean data for template
+            for row in raw_data:
+                emp = row.get('employees') or {}
+                attendance_data.append({
+                    'name': emp.get('name', 'Unknown'),
+                    'employee_code': emp.get('employee_code', '-'),
+                    'time': row['time'],
+                    'status': row['status']
+                })
+            
+            # 2. Today's count
+            today = datetime.datetime.now().strftime("%Y-%m-%d")
+            count_response = supabase.table("attendance") \
+                .select("*", count="exact") \
+                .eq("date", today) \
+                .execute()
+            today_count = count_response.count
+
+            # 3. Chart Data (Last 7 Days)
+            # Fetch last 7 days of data and aggregate in Python
+            # This is simpler than complex RPCs for now
+            seven_days_ago = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
+            chart_response = supabase.table("attendance") \
+                .select("date") \
+                .gte("date", seven_days_ago) \
+                .execute()
+            
+            dates = [r['date'] for r in chart_response.data]
+            date_counts = Counter(dates)
+            
+            # Sort by date
+            sorted_dates = sorted(date_counts.keys())
+            chart_dates = sorted_dates
+            chart_counts = [date_counts[d] for d in sorted_dates]
+
+        except Exception as e:
+            print(f"Error loading index: {e}")
+            flash(f"Error loading data: {e}", "warning")
+
     return render_template('index.html', 
                            attendance=attendance_data, 
                            count=today_count,
@@ -134,13 +153,12 @@ def index():
 @app.route('/employees')
 @login_required
 def employees_list():
-    conn = get_db_connection()
-    employees = conn.execute('SELECT * FROM employees').fetchall()
-    conn.close()
+    employees = get_all_employees()
+    # Ensure all keys exist for template even if Supabase returns partial
+    # Template likely uses: id, name, employee_code, department, email
     return render_template('employees.html', employees=employees)
 
-# --- Employee Management Routes ---
-
+# --- Employee Management ---
 @app.route('/add_employee', methods=['GET', 'POST'])
 @login_required
 def add_employee():
@@ -190,13 +208,15 @@ def add_employee():
         # Save to DB
         if len(all_encodings) > 0:
             avg_encoding = np.mean(all_encodings, axis=0)
+            
+            # Pass to CRUD (which now handles Supabase + Duplicate Check)
             success = add_new_employee(name, code, email, avg_encoding, department)
             
             if success:
-                flash(f'✅ Successfully added {name} (Trained with {len(all_encodings)} images).', 'success')
+                flash(f'✅ Successfully added {name}.', 'success')
                 return redirect(url_for('employees_list'))
             else:
-                flash('❌ Error: Employee ID might already exist.', 'danger')
+                flash('❌ Error: Employee ID already exists OR Face already registered!', 'danger')
         else:
             flash('⚠️ No face detected! Please ensure face is visible.', 'warning')
 
@@ -231,8 +251,7 @@ def delete_employee(id):
         flash('❌ Error deleting employee.', 'danger')
     return redirect(url_for('employees_list'))
 
-# --- Advanced Features (التحضير الجماعي والتقارير) ---
-
+# --- Advanced Features ---
 @app.route('/hr_scan', methods=['GET', 'POST'])
 @login_required
 def hr_scan():
@@ -298,21 +317,33 @@ def hr_scan():
 @app.route('/export_attendance')
 @login_required
 def export_attendance():
-    conn = get_db_connection()
-    sql = """
-    SELECT employees.name, employees.employee_code, attendance.date, attendance.time, attendance.status
-    FROM attendance
-    JOIN employees ON attendance.employee_id = employees.id
-    ORDER BY attendance.date DESC, attendance.time DESC
-    """
-    rows = conn.execute(sql).fetchall()
-    conn.close()
+    supabase = get_supabase_client()
+    rows = []
+    
+    if supabase:
+        try:
+             response = supabase.table("attendance") \
+                .select("*, employees(name, employee_code)") \
+                .order("date", desc=True) \
+                .order("time", desc=True) \
+                .execute()
+             rows = response.data
+        except Exception as e:
+            flash(f"Error fetching export data: {e}", "danger")
 
     si = StringIO()
     cw = csv.writer(si)
     cw.writerow(['Employee Name', 'ID Code', 'Date', 'Time', 'Status'])
+    
     for row in rows:
-        cw.writerow([row['name'], row['employee_code'], row['date'], row['time'], row['status']])
+        emp = row.get('employees') or {}
+        cw.writerow([
+            emp.get('name', 'Unknown'), 
+            emp.get('employee_code', '-'), 
+            row['date'], 
+            row['time'], 
+            row['status']
+        ])
 
     output = make_response(si.getvalue())
     output.headers["Content-Disposition"] = "attachment; filename=attendance_report.csv"
