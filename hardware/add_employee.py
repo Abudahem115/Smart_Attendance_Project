@@ -15,8 +15,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from database_modules.employee_crud import add_new_employee
+    from ai_modules.face_recognizer import get_camera
 except ImportError as e:
-    print(f"❌ Error importing database modules: {e}")
+    print(f"❌ Error importing modules: {e}")
     sys.exit(1)
 
 class EmployeeRegistrationApp:
@@ -25,13 +26,14 @@ class EmployeeRegistrationApp:
         self.window.title(window_title)
         self.window.geometry("800x600")
 
-        # Variables
-        self.video_source = 0
-        self.vid = cv2.VideoCapture(self.video_source)
+        # Use the smart camera detection (Picamera2 > GStreamer > V4L2 > Default)
+        print("Initializing camera...")
+        self.vid = get_camera()
         
-        if not self.vid.isOpened():
+        if self.vid is None or not self.vid.isOpened():
              messagebox.showerror("Error", "Unable to open camera source")
              sys.exit(1)
+        print("Camera ready!")
 
         self.current_frame = None
         self.captured_frame = None
