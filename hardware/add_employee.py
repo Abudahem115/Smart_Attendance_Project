@@ -1,14 +1,14 @@
 
 import tkinter as tk
 from tkinter import ttk, messagebox
-from PIL import Image, ImageTk, ImageDraw, ImageFont
+from PIL import Image, ImageTk
 import cv2
 import face_recognition
 import numpy as np
 import sys
 import os
 
-# Add project path to find database modules
+# Add project path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
@@ -18,17 +18,19 @@ except ImportError as e:
     print(f"Error importing modules: {e}")
     sys.exit(1)
 
-# --- Color Palette ---
-BG_COLOR = "#1a1a2e"
-CARD_COLOR = "#16213e"
-ACCENT_COLOR = "#0f3460"
-PRIMARY_COLOR = "#e94560"
-SUCCESS_COLOR = "#00b894"
-WARNING_COLOR = "#fdcb6e"
-TEXT_COLOR = "#ffffff"
-SUBTEXT_COLOR = "#a0a0b0"
+# ============ DESIGN SYSTEM ============
+# Modern Teal & Slate Theme
+BG = "#0f172a"           # Deep navy background
+CARD = "#1e293b"         # Slate card
+CARD_LIGHT = "#334155"   # Lighter slate
+TEAL = "#14b8a6"         # Primary teal
+TEAL_DARK = "#0d9488"    # Darker teal
+CORAL = "#f43f5e"        # Accent coral/pink
+AMBER = "#f59e0b"        # Warning amber
+WHITE = "#f8fafc"        # Clean white
+GRAY = "#94a3b8"         # Muted gray
+DARK_GRAY = "#475569"    # Dark gray
 
-# --- Department Options ---
 DEPARTMENTS = [
     "Administration",
     "Human Resources",
@@ -38,26 +40,27 @@ DEPARTMENTS = [
     "Operations",
     "Engineering",
     "Security",
+    "Maintenance",
     "General",
 ]
 
-REQUIRED_PHOTOS = 3
+REQUIRED_PHOTOS = 5
 
 
 class EmployeeRegistrationApp:
     def __init__(self, window):
         self.window = window
-        self.window.title("Smart Attendance - Employee Registration")
-        self.window.geometry("900x650")
-        self.window.configure(bg=BG_COLOR)
+        self.window.title("Smart Attendance - Registration")
+        self.window.geometry("960x680")
+        self.window.configure(bg=BG)
         self.window.resizable(False, False)
 
         # State
-        self.captured_encodings = []  # List of numpy arrays
+        self.captured_encodings = []
         self.current_frame = None
         self.camera_active = True
 
-        # Initialize Camera
+        # Camera
         print("Initializing camera...")
         self.vid = get_camera()
         if self.vid is None or not self.vid.isOpened():
@@ -65,214 +68,287 @@ class EmployeeRegistrationApp:
             sys.exit(1)
         print("Camera ready!")
 
-        # --- Style ---
+        # ttk style
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure("TCombobox", fieldbackground=ACCENT_COLOR, background=ACCENT_COLOR, foreground=TEXT_COLOR)
+        style.configure("Dept.TCombobox",
+                        fieldbackground=CARD_LIGHT, background=CARD_LIGHT,
+                        foreground=WHITE, selectbackground=TEAL,
+                        arrowcolor=TEAL)
+        style.map("Dept.TCombobox",
+                  fieldbackground=[("readonly", CARD_LIGHT)],
+                  foreground=[("readonly", WHITE)])
 
-        # ==================== HEADER ====================
-        header = tk.Frame(window, bg=PRIMARY_COLOR, height=50)
-        header.pack(fill=tk.X)
-        header.pack_propagate(False)
-        tk.Label(header, text="Employee Registration", font=("Arial", 18, "bold"),
-                 bg=PRIMARY_COLOR, fg=TEXT_COLOR).pack(side=tk.LEFT, padx=20, pady=10)
-        tk.Label(header, text=f"Capture {REQUIRED_PHOTOS} photos per employee",
-                 font=("Arial", 10), bg=PRIMARY_COLOR, fg="#ffcccc").pack(side=tk.RIGHT, padx=20)
+        self._build_ui()
 
-        # ==================== MAIN CONTENT ====================
-        main_frame = tk.Frame(window, bg=BG_COLOR)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
-
-        # --- LEFT: Camera Section ---
-        cam_card = tk.Frame(main_frame, bg=CARD_COLOR, relief=tk.FLAT, bd=0)
-        cam_card.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 8))
-
-        tk.Label(cam_card, text="Camera Preview", font=("Arial", 12, "bold"),
-                 bg=CARD_COLOR, fg=TEXT_COLOR).pack(pady=(15, 5))
-
-        self.canvas = tk.Canvas(cam_card, width=420, height=320, bg="#000000",
-                                highlightthickness=1, highlightbackground=ACCENT_COLOR)
-        self.canvas.pack(padx=15, pady=5)
-
-        # Capture Button
-        self.btn_capture = tk.Button(cam_card, text=f"Capture Photo (0/{REQUIRED_PHOTOS})",
-                                     font=("Arial", 13, "bold"), bg=PRIMARY_COLOR, fg=TEXT_COLOR,
-                                     activebackground="#c0392b", activeforeground=TEXT_COLOR,
-                                     relief=tk.FLAT, cursor="hand2", width=25, height=1,
-                                     command=self.capture_face)
-        self.btn_capture.pack(pady=8)
-
-        # Status
-        self.lbl_status = tk.Label(cam_card, text="Status: Ready - Position face in camera",
-                                   font=("Arial", 10), bg=CARD_COLOR, fg=SUBTEXT_COLOR)
-        self.lbl_status.pack(pady=(0, 5))
-
-        # Photo Indicators
-        indicator_frame = tk.Frame(cam_card, bg=CARD_COLOR)
-        indicator_frame.pack(pady=(0, 15))
-        tk.Label(indicator_frame, text="Photos:", font=("Arial", 10),
-                 bg=CARD_COLOR, fg=SUBTEXT_COLOR).pack(side=tk.LEFT, padx=5)
-        self.photo_indicators = []
-        for i in range(REQUIRED_PHOTOS):
-            lbl = tk.Label(indicator_frame, text=f"  {i+1}  ", font=("Arial", 10, "bold"),
-                           bg=ACCENT_COLOR, fg=SUBTEXT_COLOR, relief=tk.FLAT, padx=8, pady=2)
-            lbl.pack(side=tk.LEFT, padx=3)
-            self.photo_indicators.append(lbl)
-
-        # --- RIGHT: Form Section ---
-        form_card = tk.Frame(main_frame, bg=CARD_COLOR, relief=tk.FLAT, bd=0, width=320)
-        form_card.pack(side=tk.RIGHT, fill=tk.BOTH, padx=(8, 0))
-        form_card.pack_propagate(False)
-
-        tk.Label(form_card, text="Employee Details", font=("Arial", 12, "bold"),
-                 bg=CARD_COLOR, fg=TEXT_COLOR).pack(pady=(20, 15))
-
-        # Input Fields
-        self.entry_name = self._create_field(form_card, "Full Name")
-        self.entry_code = self._create_field(form_card, "Employee Code")
-        self.entry_email = self._create_field(form_card, "Email Address")
-
-        # Department Dropdown
-        dept_frame = tk.Frame(form_card, bg=CARD_COLOR)
-        dept_frame.pack(padx=20, pady=8, fill=tk.X)
-        tk.Label(dept_frame, text="Department", font=("Arial", 10),
-                 bg=CARD_COLOR, fg=SUBTEXT_COLOR, anchor="w").pack(fill=tk.X)
-        self.dept_var = tk.StringVar(value="General")
-        self.dept_combo = ttk.Combobox(dept_frame, textvariable=self.dept_var,
-                                        values=DEPARTMENTS, state="readonly",
-                                        font=("Arial", 12))
-        self.dept_combo.pack(fill=tk.X, pady=(3, 0), ipady=4)
-
-        # Spacer
-        tk.Frame(form_card, bg=CARD_COLOR, height=15).pack()
-
-        # Save Button
-        self.btn_save = tk.Button(form_card, text="Save Employee",
-                                   font=("Arial", 13, "bold"), bg=SUCCESS_COLOR, fg=TEXT_COLOR,
-                                   activebackground="#00a884", activeforeground=TEXT_COLOR,
-                                   relief=tk.FLAT, cursor="hand2", width=20, height=1,
-                                   command=self.save_employee, state=tk.DISABLED)
-        self.btn_save.pack(pady=5)
-
-        # Reset Button
-        self.btn_reset = tk.Button(form_card, text="Reset All",
-                                    font=("Arial", 11), bg=ACCENT_COLOR, fg=SUBTEXT_COLOR,
-                                    activebackground="#1a2a5e", activeforeground=TEXT_COLOR,
-                                    relief=tk.FLAT, cursor="hand2", width=20,
-                                    command=self.reset_form)
-        self.btn_reset.pack(pady=5)
-
-        # Info Label
-        tk.Label(form_card, text=f"Capture {REQUIRED_PHOTOS} different angles\nfor better recognition accuracy",
-                 font=("Arial", 9), bg=CARD_COLOR, fg=SUBTEXT_COLOR,
-                 justify=tk.CENTER).pack(pady=(20, 10))
-
-        # ==================== FOOTER ====================
-        footer = tk.Frame(window, bg=ACCENT_COLOR, height=30)
-        footer.pack(fill=tk.X, side=tk.BOTTOM)
-        footer.pack_propagate(False)
-        tk.Label(footer, text="Smart Attendance System v2.0", font=("Arial", 9),
-                 bg=ACCENT_COLOR, fg=SUBTEXT_COLOR).pack(pady=5)
-
-        # Start camera loop
+        # Camera loop
         self.delay = 30
-        self.update_camera()
+        self._update_camera()
         self.window.mainloop()
 
-    def _create_field(self, parent, label_text):
-        frame = tk.Frame(parent, bg=CARD_COLOR)
-        frame.pack(padx=20, pady=8, fill=tk.X)
-        tk.Label(frame, text=label_text, font=("Arial", 10),
-                 bg=CARD_COLOR, fg=SUBTEXT_COLOR, anchor="w").pack(fill=tk.X)
-        entry = tk.Entry(frame, font=("Arial", 12), bg=ACCENT_COLOR, fg=TEXT_COLOR,
-                         insertbackground=TEXT_COLOR, relief=tk.FLAT, bd=0)
-        entry.pack(fill=tk.X, pady=(3, 0), ipady=6)
+    # ==================== BUILD UI ====================
+    def _build_ui(self):
+        # --- HEADER ---
+        hdr = tk.Frame(self.window, bg=TEAL, height=56)
+        hdr.pack(fill=tk.X)
+        hdr.pack_propagate(False)
+
+        tk.Label(hdr, text="  Employee Registration",
+                 font=("Helvetica", 17, "bold"), bg=TEAL, fg=WHITE
+                 ).pack(side=tk.LEFT, padx=10)
+
+        badge = tk.Label(hdr, text=f"  {REQUIRED_PHOTOS} Photos Required  ",
+                         font=("Helvetica", 10, "bold"),
+                         bg=TEAL_DARK, fg=WHITE)
+        badge.pack(side=tk.RIGHT, padx=15, pady=14)
+
+        # --- BODY ---
+        body = tk.Frame(self.window, bg=BG)
+        body.pack(fill=tk.BOTH, expand=True, padx=12, pady=10)
+
+        # ===== LEFT COLUMN (Camera) =====
+        left = tk.Frame(body, bg=CARD, bd=0)
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 6))
+
+        # Camera label
+        cam_hdr = tk.Frame(left, bg=CARD)
+        cam_hdr.pack(fill=tk.X, padx=15, pady=(12, 4))
+        tk.Label(cam_hdr, text="Live Camera", font=("Helvetica", 11, "bold"),
+                 bg=CARD, fg=WHITE).pack(side=tk.LEFT)
+        self.lbl_face_detect = tk.Label(cam_hdr, text="  No Face  ",
+                                         font=("Helvetica", 9, "bold"),
+                                         bg=CORAL, fg=WHITE)
+        self.lbl_face_detect.pack(side=tk.RIGHT)
+
+        # Canvas
+        self.canvas = tk.Canvas(left, width=440, height=340, bg="#000",
+                                highlightthickness=2, highlightbackground=CARD_LIGHT)
+        self.canvas.pack(padx=15, pady=4)
+
+        # Capture button
+        self.btn_capture = tk.Button(
+            left, text=f"  Capture Photo  ( 0 / {REQUIRED_PHOTOS} )",
+            font=("Helvetica", 13, "bold"), bg=TEAL, fg=WHITE,
+            activebackground=TEAL_DARK, activeforeground=WHITE,
+            relief=tk.FLAT, cursor="hand2", bd=0, pady=8,
+            command=self._capture)
+        self.btn_capture.pack(fill=tk.X, padx=15, pady=(6, 4))
+
+        # Status bar
+        self.lbl_status = tk.Label(left, text="Position your face in the camera and press Capture",
+                                   font=("Helvetica", 9), bg=CARD, fg=GRAY, wraplength=400)
+        self.lbl_status.pack(pady=(0, 4))
+
+        # Photo progress dots
+        dots_frame = tk.Frame(left, bg=CARD)
+        dots_frame.pack(pady=(0, 14))
+        self.dots = []
+        for i in range(REQUIRED_PHOTOS):
+            dot = tk.Canvas(dots_frame, width=28, height=28,
+                            bg=CARD, highlightthickness=0)
+            dot.pack(side=tk.LEFT, padx=4)
+            # Draw circle
+            dot.create_oval(2, 2, 26, 26, fill=CARD_LIGHT, outline=DARK_GRAY, width=2, tags="circle")
+            dot.create_text(15, 15, text=str(i + 1), fill=DARK_GRAY,
+                            font=("Helvetica", 10, "bold"), tags="num")
+            self.dots.append(dot)
+
+        # ===== RIGHT COLUMN (Form) =====
+        right = tk.Frame(body, bg=CARD, width=330, bd=0)
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, padx=(6, 0))
+        right.pack_propagate(False)
+
+        tk.Label(right, text="Employee Details",
+                 font=("Helvetica", 13, "bold"), bg=CARD, fg=WHITE
+                 ).pack(pady=(20, 5))
+
+        # Divider
+        tk.Frame(right, bg=TEAL, height=2).pack(fill=tk.X, padx=25, pady=(0, 15))
+
+        # Fields
+        self.entry_name = self._field(right, "Full Name", "Enter full name")
+        self.entry_code = self._field(right, "Employee Code", "e.g. EMP001")
+        self.entry_email = self._field(right, "Email", "employee@company.com")
+
+        # Department dropdown
+        dept_wrap = tk.Frame(right, bg=CARD)
+        dept_wrap.pack(padx=25, pady=6, fill=tk.X)
+        tk.Label(dept_wrap, text="DEPARTMENT", font=("Helvetica", 9, "bold"),
+                 bg=CARD, fg=GRAY).pack(anchor="w")
+        self.dept_var = tk.StringVar(value="General")
+        self.dept_combo = ttk.Combobox(dept_wrap, textvariable=self.dept_var,
+                                        values=DEPARTMENTS, state="readonly",
+                                        font=("Helvetica", 11), style="Dept.TCombobox")
+        self.dept_combo.pack(fill=tk.X, pady=(4, 0), ipady=5)
+
+        # Spacer
+        tk.Frame(right, bg=CARD, height=20).pack()
+
+        # Save button
+        self.btn_save = tk.Button(
+            right, text="  Save Employee",
+            font=("Helvetica", 13, "bold"), bg=TEAL, fg=WHITE,
+            activebackground=TEAL_DARK, activeforeground=WHITE,
+            relief=tk.FLAT, cursor="hand2", bd=0, pady=8,
+            command=self._save, state=tk.DISABLED,
+            disabledforeground=DARK_GRAY)
+        self.btn_save.pack(fill=tk.X, padx=25, pady=(0, 6))
+
+        # Reset button
+        self.btn_reset = tk.Button(
+            right, text="  Reset",
+            font=("Helvetica", 11), bg=CARD_LIGHT, fg=GRAY,
+            activebackground=DARK_GRAY, activeforeground=WHITE,
+            relief=tk.FLAT, cursor="hand2", bd=0, pady=5,
+            command=self._reset)
+        self.btn_reset.pack(fill=tk.X, padx=25, pady=(0, 8))
+
+        # Tip
+        tip_frame = tk.Frame(right, bg="#1a2e3d")
+        tip_frame.pack(fill=tk.X, padx=25, pady=(10, 15))
+        tk.Label(tip_frame, text="Tip: Change your face angle\nbetween each capture for\nbetter recognition accuracy.",
+                 font=("Helvetica", 9), bg="#1a2e3d", fg=TEAL,
+                 justify=tk.CENTER, pady=8).pack()
+
+        # --- FOOTER ---
+        ftr = tk.Frame(self.window, bg=CARD_LIGHT, height=28)
+        ftr.pack(fill=tk.X, side=tk.BOTTOM)
+        ftr.pack_propagate(False)
+        tk.Label(ftr, text="Smart Attendance System  •  Face Recognition Registration",
+                 font=("Helvetica", 8), bg=CARD_LIGHT, fg=DARK_GRAY).pack(pady=5)
+
+    # ==================== HELPERS ====================
+    def _field(self, parent, label, placeholder=""):
+        wrap = tk.Frame(parent, bg=CARD)
+        wrap.pack(padx=25, pady=6, fill=tk.X)
+        tk.Label(wrap, text=label.upper(), font=("Helvetica", 9, "bold"),
+                 bg=CARD, fg=GRAY).pack(anchor="w")
+        entry = tk.Entry(wrap, font=("Helvetica", 11), bg=CARD_LIGHT, fg=WHITE,
+                         insertbackground=TEAL, relief=tk.FLAT, bd=0)
+        entry.pack(fill=tk.X, pady=(4, 0), ipady=7)
+
+        # Placeholder behavior
+        entry.insert(0, placeholder)
+        entry.config(fg=DARK_GRAY)
+
+        def on_focus_in(e):
+            if entry.get() == placeholder:
+                entry.delete(0, tk.END)
+                entry.config(fg=WHITE)
+
+        def on_focus_out(e):
+            if not entry.get():
+                entry.insert(0, placeholder)
+                entry.config(fg=DARK_GRAY)
+
+        entry.bind("<FocusIn>", on_focus_in)
+        entry.bind("<FocusOut>", on_focus_out)
+        entry._placeholder = placeholder
         return entry
 
-    def update_camera(self):
+    def _get_entry_value(self, entry):
+        """Get entry value, ignoring placeholder text."""
+        val = entry.get().strip()
+        if val == entry._placeholder:
+            return ""
+        return val
+
+    def _update_camera(self):
         if self.camera_active:
             ret, frame = self.vid.read()
             if ret:
                 self.current_frame = frame
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame_resized = cv2.resize(frame_rgb, (420, 320))
+                display = cv2.resize(frame_rgb, (440, 340))
 
-                # Draw face detection overlay
+                # Face detection on small frame for speed
                 small = cv2.resize(frame_rgb, (0, 0), fx=0.25, fy=0.25)
-                face_locs = face_recognition.face_locations(small)
-                if face_locs:
-                    for (top, right, bottom, left) in face_locs:
-                        top, right, bottom, left = top * 4, right * 4, bottom * 4, left * 4
-                        # Scale to canvas size
-                        h, w = frame_rgb.shape[:2]
-                        sx, sy = 420 / w, 320 / h
-                        cv2.rectangle(frame_resized,
-                                      (int(left * sx), int(top * sy)),
-                                      (int(right * sx), int(bottom * sy)),
-                                      (233, 69, 96), 2)
+                locs = face_recognition.face_locations(small)
 
-                self.photo = ImageTk.PhotoImage(image=Image.fromarray(frame_resized))
+                if locs:
+                    self.lbl_face_detect.config(text="  Face Detected  ", bg=TEAL)
+                    for (top, right, bottom, left) in locs:
+                        t, r, b, l = top * 4, right * 4, bottom * 4, left * 4
+                        h, w = frame_rgb.shape[:2]
+                        sx, sy = 440 / w, 340 / h
+                        x1, y1 = int(l * sx), int(t * sy)
+                        x2, y2 = int(r * sx), int(b * sy)
+                        # Draw teal rectangle
+                        cv2.rectangle(display, (x1, y1), (x2, y2), (20, 184, 166), 2)
+                        # Corner accents
+                        corner = 12
+                        for cx, cy, dx, dy in [(x1, y1, 1, 1), (x2, y1, -1, 1),
+                                                (x1, y2, 1, -1), (x2, y2, -1, -1)]:
+                            cv2.line(display, (cx, cy), (cx + corner * dx, cy), (20, 184, 166), 3)
+                            cv2.line(display, (cx, cy), (cx, cy + corner * dy), (20, 184, 166), 3)
+                else:
+                    self.lbl_face_detect.config(text="  No Face  ", bg=CORAL)
+
+                self.photo = ImageTk.PhotoImage(image=Image.fromarray(display))
                 self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
-        self.window.after(self.delay, self.update_camera)
+        self.window.after(self.delay, self._update_camera)
 
-    def capture_face(self):
+    def _capture(self):
         if self.current_frame is None:
-            self.lbl_status.config(text="Status: No camera frame available", fg=WARNING_COLOR)
+            self.lbl_status.config(text="No camera frame available.", fg=AMBER)
             return
 
         if len(self.captured_encodings) >= REQUIRED_PHOTOS:
-            self.lbl_status.config(text="Status: All photos captured!", fg=SUCCESS_COLOR)
             return
 
-        self.lbl_status.config(text="Status: Processing...", fg=WARNING_COLOR)
+        self.lbl_status.config(text="Processing capture...", fg=AMBER)
         self.window.update_idletasks()
 
-        rgb_frame = cv2.cvtColor(self.current_frame, cv2.COLOR_BGR2RGB)
-        boxes = face_recognition.face_locations(rgb_frame)
+        rgb = cv2.cvtColor(self.current_frame, cv2.COLOR_BGR2RGB)
+        boxes = face_recognition.face_locations(rgb)
 
         if len(boxes) == 0:
-            self.lbl_status.config(text="Status: No face detected! Try again.", fg=PRIMARY_COLOR)
+            self.lbl_status.config(text="No face detected. Please try again.", fg=CORAL)
             return
-
         if len(boxes) > 1:
-            self.lbl_status.config(text="Status: Multiple faces! Only 1 person please.", fg=PRIMARY_COLOR)
+            self.lbl_status.config(text="Multiple faces detected! Only one person allowed.", fg=CORAL)
             return
 
         try:
-            encodings = face_recognition.face_encodings(rgb_frame, boxes)
-            if len(encodings) > 0:
-                self.captured_encodings.append(encodings[0])
+            encs = face_recognition.face_encodings(rgb, boxes)
+            if encs:
+                self.captured_encodings.append(encs[0])
                 count = len(self.captured_encodings)
 
-                # Update indicator
-                self.photo_indicators[count - 1].config(bg=SUCCESS_COLOR, fg=TEXT_COLOR)
+                # Update dot indicator
+                dot = self.dots[count - 1]
+                dot.delete("circle")
+                dot.delete("num")
+                dot.create_oval(2, 2, 26, 26, fill=TEAL, outline=TEAL, width=2, tags="circle")
+                dot.create_text(15, 15, text="✓", fill=WHITE,
+                                font=("Helvetica", 12, "bold"), tags="num")
 
-                # Update button text
-                self.btn_capture.config(text=f"Capture Photo ({count}/{REQUIRED_PHOTOS})")
+                self.btn_capture.config(
+                    text=f"  Capture Photo  ( {count} / {REQUIRED_PHOTOS} )")
 
                 if count >= REQUIRED_PHOTOS:
-                    self.btn_capture.config(state=tk.DISABLED, bg=ACCENT_COLOR)
-                    self.btn_save.config(state=tk.NORMAL)
+                    self.btn_capture.config(state=tk.DISABLED, bg=CARD_LIGHT)
+                    self.btn_save.config(state=tk.NORMAL, bg=TEAL)
                     self.camera_active = False
                     self.lbl_status.config(
-                        text=f"Status: All {REQUIRED_PHOTOS} photos captured! Fill details & Save.",
-                        fg=SUCCESS_COLOR)
+                        text=f"All {REQUIRED_PHOTOS} photos captured! Fill in details and Save.",
+                        fg=TEAL)
                 else:
-                    remaining = REQUIRED_PHOTOS - count
+                    left = REQUIRED_PHOTOS - count
                     self.lbl_status.config(
-                        text=f"Status: Photo {count} captured! {remaining} more needed. Change angle.",
-                        fg=SUCCESS_COLOR)
+                        text=f"Photo {count} captured!  {left} remaining. Please change angle.",
+                        fg=TEAL)
             else:
-                self.lbl_status.config(text="Status: Could not encode face.", fg=PRIMARY_COLOR)
+                self.lbl_status.config(text="Could not encode face. Try again.", fg=CORAL)
         except Exception as e:
-            print(f"Encoding error: {e}")
-            self.lbl_status.config(text=f"Status: Error - {e}", fg=PRIMARY_COLOR)
+            print(f"Error: {e}")
+            self.lbl_status.config(text=f"Error: {e}", fg=CORAL)
 
-    def save_employee(self):
-        name = self.entry_name.get().strip()
-        code = self.entry_code.get().strip()
-        email = self.entry_email.get().strip()
+    def _save(self):
+        name = self._get_entry_value(self.entry_name)
+        code = self._get_entry_value(self.entry_code)
+        email = self._get_entry_value(self.entry_email)
         dept = self.dept_var.get()
 
         if not name or not code or not email:
@@ -280,55 +356,69 @@ class EmployeeRegistrationApp:
             return
 
         if len(self.captured_encodings) < REQUIRED_PHOTOS:
-            messagebox.showwarning("Missing Photos", f"Please capture {REQUIRED_PHOTOS} photos first.")
+            messagebox.showwarning("Photos Required",
+                                   f"Please capture all {REQUIRED_PHOTOS} photos first.")
             return
 
-        self.lbl_status.config(text="Status: Computing average encoding...", fg=WARNING_COLOR)
+        self.lbl_status.config(text="Computing average face encoding...", fg=AMBER)
         self.window.update_idletasks()
 
-        # Average all encodings for better accuracy
+        # Average all encodings for maximum accuracy
         avg_encoding = np.mean(self.captured_encodings, axis=0)
 
-        self.lbl_status.config(text="Status: Saving to database...", fg=WARNING_COLOR)
+        self.lbl_status.config(text="Saving to database...", fg=AMBER)
         self.window.update_idletasks()
 
         try:
             success = add_new_employee(name, code, email, avg_encoding, dept)
             if success:
-                messagebox.showinfo("Success", f"Employee '{name}' has been registered successfully!")
-                self.reset_form()
+                messagebox.showinfo("Success",
+                                    f"Employee '{name}' registered successfully!\n"
+                                    f"Department: {dept}\n"
+                                    f"Photos used: {REQUIRED_PHOTOS}")
+                self._reset()
             else:
-                self.lbl_status.config(text="Status: Failed to save. Check console.", fg=PRIMARY_COLOR)
-                messagebox.showerror("Error", "Failed to add employee. Possible duplicate face or code.")
+                self.lbl_status.config(text="Failed to save. Check console for details.", fg=CORAL)
+                messagebox.showerror("Error",
+                                     "Failed to add employee.\nPossible duplicate face or employee code.")
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
-            self.lbl_status.config(text="Status: Error", fg=PRIMARY_COLOR)
+            self.lbl_status.config(text=f"Error: {e}", fg=CORAL)
 
-    def reset_form(self):
+    def _reset(self):
         self.captured_encodings = []
         self.current_frame = None
         self.camera_active = True
 
         # Reset fields
-        self.entry_name.delete(0, tk.END)
-        self.entry_code.delete(0, tk.END)
-        self.entry_email.delete(0, tk.END)
+        for entry in [self.entry_name, self.entry_code, self.entry_email]:
+            entry.delete(0, tk.END)
+            entry.insert(0, entry._placeholder)
+            entry.config(fg=DARK_GRAY)
         self.dept_var.set("General")
 
-        # Reset UI
-        self.btn_capture.config(state=tk.NORMAL, text=f"Capture Photo (0/{REQUIRED_PHOTOS})",
-                                bg=PRIMARY_COLOR)
+        # Reset buttons
+        self.btn_capture.config(state=tk.NORMAL,
+                                text=f"  Capture Photo  ( 0 / {REQUIRED_PHOTOS} )",
+                                bg=TEAL)
         self.btn_save.config(state=tk.DISABLED)
-        for ind in self.photo_indicators:
-            ind.config(bg=ACCENT_COLOR, fg=SUBTEXT_COLOR)
-        self.lbl_status.config(text="Status: Ready - Position face in camera", fg=SUBTEXT_COLOR)
+
+        # Reset dots
+        for i, dot in enumerate(self.dots):
+            dot.delete("circle")
+            dot.delete("num")
+            dot.create_oval(2, 2, 26, 26, fill=CARD_LIGHT, outline=DARK_GRAY, width=2, tags="circle")
+            dot.create_text(15, 15, text=str(i + 1), fill=DARK_GRAY,
+                            font=("Helvetica", 10, "bold"), tags="num")
+
+        self.lbl_status.config(text="Position your face in the camera and press Capture", fg=GRAY)
 
 
 if __name__ == "__main__":
     try:
         import tkinter
     except ImportError:
-        print("Tkinter is not installed. Please install 'python3-tk'.")
+        print("Tkinter is not installed. Install with: sudo apt install python3-tk")
         sys.exit(1)
 
     root = tk.Tk()
