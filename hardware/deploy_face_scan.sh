@@ -50,7 +50,16 @@ else
     echo "ℹ️  Virtual environment already exists."
 fi
 
-    echo "✅ Swap increased to 2048MB. Attempting installation now..."
+# Check Swap Size
+SWAP_SIZE=$(free -m | grep Swap | awk '{print $2}')
+
+if [ "$SWAP_SIZE" -lt 2000 ]; then
+    echo "⚠️ Swap space is low ($SWAP_SIZE MB). Increasing to 2048MB for dlib compilation..."
+    sudo dphys-swapfile swapoff
+    sudo sed -i 's/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=2048/g' /etc/dphys-swapfile
+    sudo dphys-swapfile setup
+    sudo dphys-swapfile swapon
+    echo "✅ Swap increased to 2048MB."
 else
     echo "✅ Swap space is sufficient ($SWAP_SIZE MB)."
 fi

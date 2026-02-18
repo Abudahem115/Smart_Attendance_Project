@@ -11,5 +11,7 @@ click
 colorama
 Flask
 waitress
-supabase
-python-dotenv
+
+pillow
+opencv-python # Required for GUI (cv2.imshow/Tkinter photo)
+# scipy # Optional: for euclidean distance, or use math.hypot

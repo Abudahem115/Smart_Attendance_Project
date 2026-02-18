@@ -25,11 +25,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code
 COPY . .
 
-# Expose the port the app runs on
-EXPOSE 5000
+# Expose the port the app runs on (Waitress uses 8080)
+EXPOSE 8080
 
 # Define environment variable
-ENV FLASK_APP=web_interface/app.py
+ENV FLASK_APP=run_web_server.py
 
-# Run the command to start the app using python directly
-CMD ["python", "web_interface/app.py"]
+# Run the production server
+CMD ["python", "run_web_server.py"]

@@ -2,10 +2,11 @@
 import datetime
 import os
 import sys
-from .supabase_client import get_supabase_client
 
-# Add path to import notifications
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add project root to sys.path to ensure modules are found
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from database_modules.supabase_client import get_supabase_client
 from utils.notifications import send_attendance_email 
 
 def mark_attendance(employee_id):
@@ -14,7 +15,7 @@ def mark_attendance(employee_id):
     """
     supabase = get_supabase_client()
     if not supabase:
-        print("❌ Error: Supabase client not initialized.")
+        print("Error: Supabase client not initialized.")
         return False
 
     now = datetime.datetime.now()
@@ -34,17 +35,36 @@ def mark_attendance(employee_id):
              return False # Already marked
 
         # 2. Mark Attendance
+        # Logic to determine status based on time (Shift System)
+        # Morning: 08:00 - 12:00
+        # Afternoon: 13:00 - 16:30
+        
+        current_hour = now.hour
+        current_minute = now.minute
+        
+        attendance_status = "Present" # Default
+        
+        if 7 <= current_hour < 12:
+            attendance_status = "Morning Check-In (تسجيل دخول صباحي)"
+        elif 12 <= current_hour < 13:
+             attendance_status = "Morning Check-Out (تسجيل خروج صباحي)"
+        elif 13 <= current_hour < 16:
+             attendance_status = "Afternoon Check-In (تسجيل دخول مسائي)"
+        elif 16 <= current_hour < 19:
+             # Flexible window for afternoon checkout (4:30 PM is 16:30)
+             attendance_status = "Afternoon Check-Out (تسجيل خروج مسائي)"
+        
         data = {
             "employee_id": employee_id,
             "date": date_today,
             "time": time_now,
-            "status": "Present"
+            "status": attendance_status
         }
         
         insert_response = supabase.table("attendance").insert(data).execute()
         
         if insert_response.data:
-            print(f"✅ Success: Attendance marked for Employee ID: {employee_id} at {time_now}")
+            print(f"Success: Attendance marked for Employee ID: {employee_id} at {time_now}")
             
             # 3. Fetch Employee data for notification
             # We can do a join in Supabase, or just a simple fetch
@@ -54,15 +74,15 @@ def mark_attendance(employee_id):
                 employee_name = emp_response.data['name']
                 email = emp_response.data['email']
 
-                # 🔥 Send Email in background
-                print("⏳ Sending notification email...")
-                send_attendance_email(email, employee_name, time_now, date_today)
+                # Send Email in background
+                print("Sending notification email...")
+                send_attendance_email(email, employee_name, time_now, date_today, attendance_status)
             
             return True
         else:
-            print("❌ Error marking attendance: Insert failed.")
+            print("Error marking attendance: Insert failed.")
             return False
 
     except Exception as e:
-        print(f"❌ Error marking attendance: {e}")
+        print(f"Error marking attendance: {e}")
         return False

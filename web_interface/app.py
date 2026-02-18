@@ -1,3 +1,4 @@
+
 # File: web_interface/app.py
 from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
 import os
@@ -30,7 +31,7 @@ from database_modules.supabase_client import get_supabase_client
 
 # App Config
 app = Flask(__name__)
-app.secret_key = "super_secret_key"
+app.secret_key = os.environ.get("SECRET_KEY", "dev_fallback_key")
 
 # Folder Config
 UPLOAD_FOLDER = os.path.join(current_dir, 'static', 'uploads')
