@@ -1,6 +1,6 @@
 
 # Use an official Python runtime as a parent image
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 # Set the working directory in the container
 WORKDIR /app
@@ -30,8 +30,9 @@ COPY . .
 # Expose the port the app runs on (Run on 8090 to avoid conflicts)
 EXPOSE 8090
 
-# Define environment variable
+# Define environment variables
 ENV FLASK_APP=run_web_server.py
+ENV PYTHONUNBUFFERED=1
 
 # Run the production server on port 8090
 CMD ["python", "run_web_server.py"]
