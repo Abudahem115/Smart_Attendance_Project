@@ -15,11 +15,12 @@ A professional, secure, and production-ready attendance system using **Face Reco
   - **Secure Storage**: All credentials stored safely in `.env`.
 - **🕒 Smart Shift Logic**:
   - Automatically detects **Morning Check-In/Out** and **Afternoon Check-In/Out**.
-  - **Bilingual Output**: Supports both English and Arabic status messages (e.g., *Morning Check-In (تسجيل دخول صباحي)*).
+  - **English-Only Output**: Standardized status messages for global compatibility (e.g., *Morning Check-In*).
 - **🚀 Production Ready**:
   - **Web Dashboard**: comprehensive admin panel for employee management.
   - **Text-Only Logs**: Clean, professional console output (no emojis) for easy parsing.
   - **Docker Support**: Containerized deployment for easy scaling.
+  - **Detailed Deployment Guide**: See [DEPLOYMENT.md](DEPLOYMENT.md) for VPS and Raspberry Pi setup.
 - **☁️ Cloud Data**: Real-time syncing with **Supabase** (PostgreSQL).
 
 ---

@@ -366,14 +366,16 @@ def start_recognition_camera():
                         # Determine Status for Console Output
                         current_hour = now_disp.hour
                         status_disp = "Present"
-                        if 7 <= current_hour < 12:
-                            status_disp = "Morning Check-In (تسجيل دخول صباحي)"
+                        if 5 <= current_hour < 12:
+                            status_disp = "Morning Check-In"
                         elif 12 <= current_hour < 13:
-                            status_disp = "Morning Check-Out (تسجيل خروج صباحي)"
+                            status_disp = "Morning Check-Out"
                         elif 13 <= current_hour < 16:
-                            status_disp = "Afternoon Check-In (تسجيل دخول مسائي)"
-                        elif 16 <= current_hour < 19:
-                            status_disp = "Afternoon Check-Out (تسجيل خروج مسائي)"
+                            status_disp = "Afternoon Check-In"
+                        elif 16 <= current_hour < 22:
+                            status_disp = "Afternoon Check-Out"
+                        else:
+                            status_disp = "Check-In/Out"
 
                         print(f"Verified: {name} | {date_disp} | {time_disp} | {status_disp}")
                         

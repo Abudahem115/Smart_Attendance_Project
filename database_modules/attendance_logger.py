@@ -44,15 +44,17 @@ def mark_attendance(employee_id):
         
         attendance_status = "Present" # Default
         
-        if 7 <= current_hour < 12:
-            attendance_status = "Morning Check-In (تسجيل دخول صباحي)"
+        if 5 <= current_hour < 12:
+            attendance_status = "Morning Check-In"
         elif 12 <= current_hour < 13:
-             attendance_status = "Morning Check-Out (تسجيل خروج صباحي)"
+             attendance_status = "Morning Check-Out"
         elif 13 <= current_hour < 16:
-             attendance_status = "Afternoon Check-In (تسجيل دخول مسائي)"
-        elif 16 <= current_hour < 19:
-             # Flexible window for afternoon checkout (4:30 PM is 16:30)
-             attendance_status = "Afternoon Check-Out (تسجيل خروج مسائي)"
+             attendance_status = "Afternoon Check-In"
+        elif 16 <= current_hour < 22:
+             attendance_status = "Afternoon Check-Out"
+        else:
+             # Night / Other times
+             attendance_status = "Check-In/Out"
         
         data = {
             "employee_id": employee_id,

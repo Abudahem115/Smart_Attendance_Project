@@ -79,6 +79,7 @@
                     <tr>
                         <th>Employee Name</th>
                         <th>ID Code</th>
+                        <th>Date</th>
                         <th>Time</th>
                         <th>Status</th>
                     </tr>
@@ -88,6 +89,7 @@
                     <tr>
                         <td><strong>{{ row['name'] }}</strong></td>
                         <td>{{ row['employee_code'] }}</td>
+                        <td>{{ row.get('date', '-') }}</td>
                         <td>{{ row['time'] }}</td>
                         <td><span class="badge bg-primary rounded-pill">{{ row['status'] }}</span></td>
                     </tr>
