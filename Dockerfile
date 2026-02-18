@@ -35,4 +35,4 @@ ENV FLASK_APP=run_web_server.py
 ENV PYTHONUNBUFFERED=1
 
 # Run the production server on port 8090
-CMD ["python", "run_web_server.py"]
+CMD ["python3", "run_web_server.py"]
