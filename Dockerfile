@@ -1,6 +1,5 @@
-
 # Use an official Python runtime as a parent image
-FROM python:3.11-slim
+FROM python:3.9-slim
 
 # Set the working directory in the container
 WORKDIR /app
@@ -35,4 +34,4 @@ ENV FLASK_APP=run_web_server.py
 ENV PYTHONUNBUFFERED=1
 
 # Run the production server on port 8090
-CMD /usr/local/bin/python3 run_web_server.py
+CMD ["python", "run_web_server.py"]
