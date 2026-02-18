@@ -11,6 +11,9 @@ from waitress import serve
 from web_interface.app import app
 
 if __name__ == "__main__":
+    # Get port from environment variable or use 8090 (Avoid 8000/8080)
+    port = int(os.environ.get("PORT", 8090))
+    
     print("Starting Production Server for Smart Attendance...")
-    print("Server running on http://0.0.0.0:8000")
-    serve(app, host='0.0.0.0', port=8000)
+    print(f"Server running on http://0.0.0.0:{port}")
+    serve(app, host='0.0.0.0', port=port)
