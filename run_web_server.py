@@ -12,5 +12,5 @@ from web_interface.app import app
 
 if __name__ == "__main__":
     print("Starting Production Server for Smart Attendance...")
-    print("Server running on http://localhost:8080")
-    serve(app, host='localhost', port=8080)
+    print("Server running on http://0.0.0.0:8000")
+    serve(app, host='0.0.0.0', port=8000)

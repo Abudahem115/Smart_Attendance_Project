@@ -39,12 +39,13 @@ The web interface is containerized for easy deployment on any VPS (DigitalOcean,
     # Build the image
     docker build -t smart_attendance_web .
 
-    # Run the container (background mode, mapping port 80 to 8080)
-    docker run -d --name smart_attendance -p 80:8080 --env-file .env --restart always smart_attendance_web
+    # Run the container (background mode, mapping port 80 to 8000)
+    docker run -d --name smart_attendance -p 80:8000 --env-file .env --restart always smart_attendance_web
     ```
 
 4.  **Verify**:
     Open your VPS IP address in a browser (e.g., `http://your-vps-ip`). You should see the login page.
+    (Note: The container exposes port 8000 internally, but we mapped it to port 80 on the host).
 
 ---
 
