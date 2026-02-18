@@ -11,8 +11,6 @@ RUN apt-get update && apt-get install -y \
     cmake \
     libopenblas-dev \
     liblapack-dev \
-    libx11-dev \
-    libgtk-3-dev \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
