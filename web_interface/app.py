@@ -118,6 +118,7 @@ def index():
                 attendance_data.append({
                     'name': emp.get('name', 'Unknown'),
                     'employee_code': emp.get('employee_code', '-'),
+                    'date': row.get('date', '-'),
                     'time': row['time'],
                     'status': row['status']
                 })
