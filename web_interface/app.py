@@ -1,6 +1,7 @@
 
 # File: web_interface/app.py
 from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
+from werkzeug.security import check_password_hash
 import os
 import sys
 import face_recognition
@@ -63,14 +64,19 @@ def login():
              return render_template('login.html')
 
         try:
-            response = supabase.table('admins').select("*").eq('username', username).eq('password', password).execute()
+            # Fetch admin by username only
+            response = supabase.table('admins').select("*").eq('username', username).execute()
             
-            # response.data is a list
             if response.data and len(response.data) > 0:
-                session['admin_logged_in'] = True
-                session['username'] = username
-                flash('✅ Welcome back, Admin!', 'success')
-                return redirect(url_for('index'))
+                stored_hash = response.data[0]['password']
+                # Verify hashed password
+                if check_password_hash(stored_hash, password):
+                    session['admin_logged_in'] = True
+                    session['username'] = username
+                    flash('✅ Welcome back, Admin!', 'success')
+                    return redirect(url_for('index'))
+                else:
+                    flash('❌ Invalid Username or Password', 'danger')
             else:
                 flash('❌ Invalid Username or Password', 'danger')
         except Exception as e:
