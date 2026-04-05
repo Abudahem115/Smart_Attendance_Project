@@ -1,70 +1,104 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <title>Login - Smart Attendance</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sign in to the Smart Attendance HR administration panel">
+    <title>Login — Smart Attendance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-    <style>
-        .login-card {
-            width: 100%;
-            max-width: 420px;
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            background: rgba(30, 41, 59, 0.6);
-        }
-
-        .brand-logo {
-            font-size: 3rem;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-    </style>
 </head>
-
 <body>
+    <div class="login-page">
+        <div class="card shadow login-card fade-in">
+            <div class="card-body p-4 p-sm-5">
+                <!-- Theme toggle -->
+                <div class="d-flex justify-content-end mb-3">
+                    <button class="theme-toggle" onclick="toggleTheme()"
+                        style="width:auto;padding:0.4rem 0.65rem;border-radius:var(--radius-sm);background:var(--bg-elevated);border:1px solid var(--border);">
+                        <i class="bi bi-moon-stars" id="theme-icon"></i>
+                    </button>
+                </div>
 
-    <div class="container d-flex justify-content-center align-items-center min-vh-100">
-        <div class="card shadow login-card">
-            <div class="card-body p-5">
-                <div class="brand-logo">🔒</div>
-                <h3 class="text-center mb-4">HR Admin Login</h3>
+                <div class="login-icon">
+                    <i class="bi bi-shield-lock"></i>
+                </div>
+                <h3 class="text-center mb-1">Welcome Back</h3>
+                <p class="text-center mb-4" style="font-size:0.85rem;color:var(--text-muted);">Sign in to HR Administration</p>
 
                 {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                 {% for category, message in messages %}
-                <div class="alert alert-{{ category }} fade show" role="alert">
-                    {{ message }}
-                </div>
+                <div class="alert alert-{{ category }} fade show" role="alert">{{ message }}</div>
                 {% endfor %}
                 {% endif %}
                 {% endwith %}
 
-                <form method="POST">
+                <form method="POST" id="loginForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
-                        <label class="form-label">Username</label>
-                        <input type="text" name="username" class="form-control form-control-lg"
-                            placeholder="Enter username" required>
+                        <label class="form-label"><i class="bi bi-person me-1" style="color:var(--primary);"></i>Username</label>
+                        <input type="text" name="username" id="login-username" class="form-control"
+                            placeholder="Enter username" autocomplete="username" required>
                     </div>
-                    <div class="mb-4">
-                        <label class="form-label">Password</label>
-                        <input type="password" name="password" class="form-control form-control-lg"
-                            placeholder="••••••••" required>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="bi bi-lock me-1" style="color:var(--primary);"></i>Password</label>
+                        <div class="position-relative">
+                            <input type="password" name="password" id="login-password" class="form-control"
+                                placeholder="Enter password" autocomplete="current-password" required>
+                            <button type="button" class="btn btn-sm position-absolute top-50 end-0 translate-middle-y me-2"
+                                style="background:none;border:none;color:var(--text-muted);padding:0.25rem;"
+                                onclick="togglePassword()" id="togglePwdBtn" tabindex="-1">
+                                <i class="bi bi-eye" id="pwdIcon"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary btn-lg">Login</button>
+                    <div class="d-grid mt-4">
+                        <button type="submit" id="login-submit" class="btn btn-primary btn-lg" onclick="showLoading(this)">
+                            <span id="loginBtnText">Sign In</span>
+                            <span id="loginSpinner" class="spinner-border spinner-border-sm ms-2" style="display:none;" role="status"></span>
+                        </button>
                     </div>
                 </form>
 
-                <div class="text-center mt-4 text-muted small">
-                    Smart Attendance System v2.0
-                </div>
+                <p class="text-center mt-4 mb-0" style="font-size:0.75rem;color:var(--text-muted);">
+                    <i class="bi bi-shield-check me-1"></i>Protected by Smart Attendance Security
+                </p>
             </div>
         </div>
     </div>
 
-</body>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function getTheme() { return localStorage.getItem('sa-theme') || 'dark'; }
+        function applyTheme(t) {
+            document.documentElement.setAttribute('data-theme', t);
+            document.getElementById('theme-icon').className = t === 'dark' ? 'bi bi-moon-stars' : 'bi bi-sun';
+            localStorage.setItem('sa-theme', t);
+        }
+        function toggleTheme() { applyTheme(getTheme() === 'dark' ? 'light' : 'dark'); }
+        applyTheme(getTheme());
 
+        function togglePassword() {
+            const pwd = document.getElementById('login-password');
+            const icon = document.getElementById('pwdIcon');
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                icon.className = 'bi bi-eye-slash';
+            } else {
+                pwd.type = 'password';
+                icon.className = 'bi bi-eye';
+            }
+        }
+
+        function showLoading(btn) {
+            setTimeout(() => {
+                document.getElementById('loginBtnText').textContent = 'Signing in…';
+                document.getElementById('loginSpinner').style.display = 'inline-block';
+            }, 100);
+        }
+    </script>
+</body>
 </html>

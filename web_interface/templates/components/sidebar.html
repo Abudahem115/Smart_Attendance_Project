@@ -1,0 +1,55 @@
+<!-- Sidebar Overlay (Mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- Floating Global Theme Toggle -->
+<button class="global-theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+    <i class="bi bi-moon-stars" id="global-theme-icon"></i>
+</button>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <a href="/" class="sidebar-brand flex-grow-1">
+            <span class="brand-icon"><i class="bi bi-building"></i></span>
+            <span class="sidebar-brand-text">Smart Attendance</span>
+        </a>
+        <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle Menu">
+            <i class="bi bi-list" id="sidebar-toggle-icon"></i>
+        </button>
+        <button class="sidebar-close" onclick="closeSidebar()"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="bi bi-grid"></i> <span>Dashboard</span></a>
+        <a href="/employees" class="nav-link {% if request.path == '/employees' %}active{% endif %}"><i class="bi bi-people"></i> <span>Employees</span></a>
+        <a href="/attendance" class="nav-link {% if request.path == '/attendance' %}active{% endif %}"><i class="bi bi-calendar3"></i> <span>Attendance List</span></a>
+        <a href="/add_employee" class="nav-link {% if request.path == '/add_employee' %}active{% endif %}"><i class="bi bi-person-plus"></i> <span>Add Employee</span></a>
+    </nav>
+
+    <!-- Admin Profile -->
+    <div class="admin-section" style="border-bottom: none; border-top: 1px solid var(--border-color, rgba(255,255,255,0.05)); margin-top: auto;">
+        <div class="admin-avatar">
+            {% if session.username %}{{ session.username[:2] | upper }}{% else %}AD{% endif %}
+        </div>
+        <div class="admin-info">
+            <div class="admin-name">{{ session.username | default('Admin') }}</div>
+            <div class="admin-role">Administrator</div>
+        </div>
+    </div>
+
+    <div class="sidebar-footer">
+        <a href="/logout" class="nav-link logout-link"><i class="bi bi-box-arrow-right"></i> <span>Logout</span></a>
+    </div>
+</aside>
+
+<!-- Top Bar (Mobile) -->
+<div class="topbar">
+    <button class="topbar-toggle" onclick="openSidebar()"><i class="bi bi-list"></i></button>
+    <a href="/" class="topbar-brand">
+        <span class="brand-icon" style="width:28px;height:28px;font-size:0.85rem;"><i class="bi bi-building"></i></span>
+        Smart Attendance
+    </a>
+    <button class="header-theme-toggle" onclick="toggleTheme()" style="width:auto;padding:0.375rem;">
+        <i class="bi bi-moon-stars" id="theme-icon-mobile"></i>
+    </button>
+</div>

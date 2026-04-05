@@ -1,154 +1,189 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
+{% block title %}Dashboard — Smart Attendance{% endblock %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HR Dashboard - Smart Attendance</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-</head>
+{% block content %}
 
-<body>
-
-    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-                🏫 <span>HR Attendance</span>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto gap-2">
-                    <li class="nav-item"><a class="nav-link active" href="/">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/employees">Employees</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/add_employee">Add Employee</a></li>
-                    <li class="nav-item ms-md-3">
-                        <a class="btn btn-danger btn-sm d-flex align-items-center gap-2 px-3 h-100" href="/logout">
-                            <span>Logout</span> 🔒
-                        </a>
-                    </li>
-                </ul>
+<!-- Stat Cards -->
+<div class="row mb-4 g-3">
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card h-100">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span>Today's Attendance</span>
+                <span class="stat-icon stat-icon-success"><i class="bi bi-calendar-check"></i></span>
+            </div>
+            <div class="card-body d-flex flex-column justify-content-center align-items-center py-4">
+                <div class="stat-value" style="color:var(--success);">{{ count }}</div>
+                <p class="stat-label mt-2 mb-0">Employees Present</p>
             </div>
         </div>
-    </nav>
-
-    <div class="container">
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
-
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card text-white bg-success stat-card h-100">
-                    <div class="card-header fw-bold">📅 Attendance Today</div>
-                    <div class="card-body d-flex flex-column justify-content-center align-items-center">
-                        <h1 class="display-1 fw-bold">{{ count }}</h1>
-                        <p class="card-text fs-5">Employees Present</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-8">
-                <div class="card shadow h-100">
-                    <div class="card-header fw-bold">📊 Weekly Trends (Last 7 Days)</div>
-                    <div class="card-body">
-                        <canvas id="attendanceChart" style="max-height: 200px;"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="header-title">📋 Live Attendance Log</h3>
-            <a href="/export_attendance" class="btn btn-success">📥 Export to Excel</a>
-        </div>
-
-        <div class="card p-0 overflow-hidden shadow">
-            <table class="table table-striped table-hover mb-0 align-middle">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Employee Name</th>
-                        <th>ID Code</th>
-                        <th>Date</th>
-                        <th>Time</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in attendance %}
-                    <tr>
-                        <td><strong>{{ row['name'] }}</strong></td>
-                        <td>{{ row['employee_code'] }}</td>
-                        <td>{{ row.get('date') }}</td>
-                        <td>{{ row['time'] }}</td>
-                        <td><span class="badge bg-primary rounded-pill">{{ row['status'] }}</span></td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="4" class="text-center py-4 text-muted">
-                            No attendance records found for today.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
     </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card h-100">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span>Total Employees</span>
+                <span class="stat-icon stat-icon-primary"><i class="bi bi-people"></i></span>
+            </div>
+            <div class="card-body d-flex flex-column justify-content-center align-items-center py-4">
+                <div class="stat-value" style="color:var(--primary);">{{ total_employees }}</div>
+                <p class="stat-label mt-2 mb-0">Registered</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card h-100">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span>Attendance Rate</span>
+                <span class="stat-icon stat-icon-info"><i class="bi bi-graph-up"></i></span>
+            </div>
+            <div class="card-body d-flex flex-column justify-content-center align-items-center py-4">
+                {% set rate = ((count / total_employees * 100) | round(0) | int) if total_employees > 0 else 0 %}
+                <div class="stat-value" style="color:var(--info);">{{ rate }}%</div>
+                <p class="stat-label mt-2 mb-0">Today</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card h-100">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span>Absent Today</span>
+                <span class="stat-icon stat-icon-danger"><i class="bi bi-person-x"></i></span>
+            </div>
+            <div class="card-body d-flex flex-column justify-content-center align-items-center py-4">
+                {% set absent = total_employees - count if total_employees > count else 0 %}
+                <div class="stat-value" style="color:var(--danger);">{{ absent }}</div>
+                <p class="stat-label mt-2 mb-0">Not Checked In</p>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-bar-chart" style="color:var(--primary);"></i>
+                Weekly Attendance Trends (Last 7 Days)
+            </div>
+            <div class="card-body">
+                <canvas id="attendanceChart" style="max-height:220px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <!-- JSON data injected safely for client-side JS to consume -->
-    <script id="chart-data-dates" type="application/json">{{ chart_dates | tojson | safe }}</script>
-    <script id="chart-data-counts" type="application/json">{{ chart_counts | tojson | safe }}</script>
+<!-- Today's Attendance Table -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h3 class="page-title"><i class="bi bi-list-check"></i>Today's Attendance</h3>
+    <div class="d-flex gap-2">
+        <a href="/attendance" class="btn btn-outline-primary btn-sm"><i class="bi bi-calendar3 me-1"></i>View All</a>
+        <a href="/export_attendance" class="btn btn-success btn-sm"><i class="bi bi-download me-1"></i>Export CSV</a>
+    </div>
+</div>
 
-    <script>
-        // استلام البيانات من بايثون بأمان
-        const dates = JSON.parse(document.getElementById('chart-data-dates').textContent || '[]');
-        const counts = JSON.parse(document.getElementById('chart-data-counts').textContent || '[]');
+<div class="card p-0 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>ID Code</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in attendance %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <span class="emp-avatar">{{ row['name'][:2] | upper }}</span>
+                            <strong>{{ row['name'] }}</strong>
+                        </div>
+                    </td>
+                    <td><code style="color:var(--text-secondary);">{{ row['employee_code'] }}</code></td>
+                    <td>{{ row['date'] }}</td>
+                    <td>{{ row['time'] }}</td>
+                    <td>
+                        <span
+                            class="badge {% if 'Check-In' in row['status'] %}badge-checkin{% elif 'Check-Out' in row['status'] %}badge-checkout{% else %}badge-status{% endif %}">
+                            {{ row['status'] }}
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state">
+                            <i class="bi bi-calendar-x d-block"></i>
+                            <p>No attendance records found for today.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
 
-        const ctx = document.getElementById('attendanceChart').getContext('2d');
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script id="chart-data-dates" type="application/json">{{ chart_dates | tojson | safe }}</script>
+<script id="chart-data-counts" type="application/json">{{ chart_counts | tojson | safe }}</script>
 
-        new Chart(ctx, {
-            type: 'bar', // نوع الرسم (أعمدة)
-            data: {
-                labels: dates, // التواريخ (محور X)
-                datasets: [{
-                    label: 'Number of Employees',
-                    data: counts, // الأعداد (محور Y)
-                    backgroundColor: 'rgba(25, 135, 84, 0.6)', // لون أخضر شفاف (مثل البوتستراب Success)
-                    borderColor: 'rgba(25, 135, 84, 1)',
-                    borderWidth: 1,
-                    borderRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 1 } // التأكد من أن الأرقام صحيحة (بدون كسور)
-                    }
+<script>
+    const dates = JSON.parse(document.getElementById('chart-data-dates').textContent || '[]');
+    const counts = JSON.parse(document.getElementById('chart-data-counts').textContent || '[]');
+    const ctx = document.getElementById('attendanceChart').getContext('2d');
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+    gradient.addColorStop(0, 'rgba(99,102,241,0.4)');
+    gradient.addColorStop(1, 'rgba(99,102,241,0.02)');
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Employees',
+                data: counts,
+                backgroundColor: gradient,
+                borderColor: 'rgba(99,102,241,1)',
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false,
+                hoverBackgroundColor: 'rgba(99,102,241,0.6)',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 800, easing: 'easeOutQuart' },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1, color: '#64748b', font: { size: 11, family: 'Inter' } },
+                    grid: { color: 'rgba(128,128,128,0.06)' }
                 },
-                plugins: {
-                    legend: { display: false } // إخفاء العنوان المكرر داخل الرسم
+                x: {
+                    ticks: { color: '#64748b', font: { size: 11, family: 'Inter' } },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15,23,42,0.9)',
+                    titleFont: { family: 'Inter', weight: 600 },
+                    bodyFont: { family: 'Inter' },
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: false
                 }
             }
-        });
-    </script>
-
-</body>
-
-</html>
+        }
+    });
+</script>
+{% endblock %}

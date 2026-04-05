@@ -1,0 +1,43 @@
+<script>
+    // Theme Management
+    function getTheme() { return localStorage.getItem('sa-theme') || 'dark'; }
+    function applyTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        const iconClass = t === 'dark' ? 'bi bi-moon-stars' : 'bi bi-sun';
+        
+        // Update all possible theme icons across the global UI
+        const globalIcon = document.getElementById('global-theme-icon');
+        if (globalIcon) globalIcon.className = iconClass;
+        
+        const mobIcon = document.getElementById('theme-icon-mobile');
+        if (mobIcon) mobIcon.className = iconClass;
+        
+        localStorage.setItem('sa-theme', t);
+    }
+    function toggleTheme() { applyTheme(getTheme() === 'dark' ? 'light' : 'dark'); }
+    applyTheme(getTheme());
+
+    // Sidebar Management (Desktop)
+    function toggleSidebar() {
+        const sb = document.getElementById('sidebar');
+        if(sb) {
+            sb.classList.toggle('collapsed');
+            const isCollapsed = sb.classList.contains('collapsed');
+            localStorage.setItem('sa-sidebar', isCollapsed ? 'collapsed' : 'expanded');
+        }
+    }
+    if (localStorage.getItem('sa-sidebar') === 'collapsed') {
+        const sb = document.getElementById('sidebar');
+        if(sb) sb.classList.add('collapsed');
+    }
+
+    // Sidebar Management (Mobile)
+    function openSidebar() {
+        document.getElementById('sidebar').classList.add('open');
+        document.getElementById('sidebarOverlay').classList.add('active');
+    }
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebarOverlay').classList.remove('active');
+    }
+</script>

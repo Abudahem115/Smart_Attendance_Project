@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Attendance List — Smart Attendance{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3 mb-4">
+    <h3 class="page-title mb-0"><i class="bi bi-calendar3"></i>Attendance List</h3>
+
+    <!-- Action Bar -->
+    <div class="d-flex flex-wrap align-items-center gap-3">
+        <!-- Instant Search -->
+        <div class="search-box position-relative" style="min-width: 220px;">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+            <input type="search" id="attendanceSearch" class="form-control ps-5" placeholder="Search records..." onkeyup="filterAttendance()">
+        </div>
+
+        <!-- Month Filter -->
+        <form method="GET" action="/attendance" class="d-flex align-items-center gap-2 m-0">
+            <select name="month" class="form-select" style="min-width:140px;" onchange="this.form.submit()">
+                {% set months = ['January','February','March','April','May','June','July','August','September','October','November','December'] %}
+                {% for m in months %}
+                <option value="{{ loop.index }}" {% if selected_month == loop.index %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i></button>
+        </form>
+
+        <!-- Export -->
+        <a href="/export_attendance?month={{ selected_month }}" class="btn btn-success d-flex align-items-center">
+            <i class="bi bi-download me-2"></i>Export CSV
+        </a>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row mb-4 g-3">
+    <div class="col-12 col-md-4">
+        <div class="card stat-card">
+            <div class="card-body text-center py-3">
+                <div class="stat-value" style="font-size:2rem;color:var(--primary);">{{ total_records }}</div>
+                <p class="stat-label mb-0">Total Records</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card stat-card">
+            <div class="card-body text-center py-3">
+                <div class="stat-value" style="font-size:2rem;color:var(--success);">{{ total_attended }}</div>
+                <p class="stat-label mb-0">People Attended</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card stat-card">
+            <div class="card-body text-center py-3">
+                <div class="stat-value" style="font-size:2rem;color:var(--danger);">{{ total_not_attended }}</div>
+                <p class="stat-label mb-0">Not Attended</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Table -->
+<div class="card p-0 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="attendanceTable">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>ID Code</th>
+                    <th>Department</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in attendance_data %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <span class="emp-avatar">{{ row['name'][:2] | upper }}</span>
+                            <strong>{{ row['name'] }}</strong>
+                        </div>
+                    </td>
+                    <td><code style="color:var(--text-secondary);">{{ row['employee_code'] }}</code></td>
+                    <td><span class="badge badge-status">{{ row['department'] }}</span></td>
+                    <td>{{ row['date'] }}</td>
+                    <td>{{ row['time'] }}</td>
+                    <td>
+                        <span class="badge {% if 'Check-In' in row['status'] %}badge-checkin{% elif 'Check-Out' in row['status'] %}badge-checkout{% else %}badge-status{% endif %}">
+                            {{ row['status'] }}
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <i class="bi bi-calendar-x d-block"></i>
+                            <p>No attendance records found for this month.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function filterAttendance() {
+        const filter = document.getElementById("attendanceSearch").value.toLowerCase();
+        const rows = document.querySelectorAll("#attendanceTable tbody tr");
+
+        rows.forEach(tr => {
+            const text = tr.textContent.toLowerCase();
+            tr.style.display = text.indexOf(filter) > -1 ? "" : "none";
+        });
+    }
+</script>
+{% endblock %}

@@ -14,5 +14,6 @@ opencv-python-headless
 pillow
 Werkzeug
 waitress
+flask-wtf
 supabase
 python-dotenv

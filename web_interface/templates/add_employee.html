@@ -1,244 +1,792 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
+{% block title %}Add Employee — Smart Attendance{% endblock %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>Add New Employee - Manual Capture</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-    <style>
-        #camera-section {
-            display: none;
+{% block head %}
+<style>
+    /* ── Page Layout ── */
+    .add-emp-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    @media (max-width: 900px) {
+        .add-emp-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* ── Section Headers ── */
+    .section-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .section-label::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+    }
+
+    /* ── Field Groups ── */
+    .field-group {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+
+    .field-group label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 0.35rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .field-group label i {
+        color: var(--primary);
+        font-size: 0.9rem;
+    }
+
+    .field-group .form-control,
+    .field-group .form-select {
+        background: var(--input-bg);
+        border: 1.5px solid var(--border);
+        border-radius: 10px;
+        color: var(--text-primary);
+        padding: 0.65rem 1rem;
+        font-size: 0.9rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .field-group .form-control:focus,
+    .field-group .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        outline: none;
+        background: var(--input-bg);
+        color: var(--text-primary);
+    }
+
+    .field-group .form-control::placeholder {
+        color: var(--text-muted);
+    }
+
+    /* ── Camera Panel ── */
+    .camera-panel {
+        background: var(--glass-bg);
+        border: 1.5px solid var(--glass-border);
+        border-radius: 16px;
+        overflow: hidden;
+        backdrop-filter: blur(16px);
+    }
+
+    .camera-panel-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .camera-panel-header h6 {
+        margin: 0;
+        font-weight: 700;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .mode-tabs {
+        display: flex;
+        background: var(--bg-elevated);
+        border-radius: 8px;
+        padding: 3px;
+        gap: 2px;
+    }
+
+    .mode-tab {
+        padding: 0.3rem 0.85rem;
+        border-radius: 6px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        transition: all 0.2s;
+    }
+
+    .mode-tab.active {
+        background: var(--primary);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+    }
+
+    /* ── Video ── */
+    #camera-section {
+        display: none;
+    }
+
+    .video-container {
+        position: relative;
+        width: 100%;
+        background: #000;
+        aspect-ratio: 4/3;
+        overflow: hidden;
+    }
+
+    #video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    #canvas {
+        display: none;
+    }
+
+    .corner-bracket {
+        position: absolute;
+        width: 28px;
+        height: 28px;
+        border-color: var(--primary);
+        border-style: solid;
+        opacity: 0.9;
+    }
+
+    .corner-bracket.tl {
+        top: 12px;
+        left: 12px;
+        border-width: 3px 0 0 3px;
+        border-radius: 4px 0 0 0;
+    }
+
+    .corner-bracket.tr {
+        top: 12px;
+        right: 12px;
+        border-width: 3px 3px 0 0;
+        border-radius: 0 4px 0 0;
+    }
+
+    .corner-bracket.bl {
+        bottom: 12px;
+        left: 12px;
+        border-width: 0 0 3px 3px;
+        border-radius: 0 0 0 4px;
+    }
+
+    .corner-bracket.br {
+        bottom: 12px;
+        right: 12px;
+        border-width: 0 3px 3px 0;
+        border-radius: 0 0 4px 0;
+    }
+
+    /* ── Countdown ── */
+    #countdown-overlay {
+        display: none;
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        gap: 0.4rem;
+        z-index: 20;
+    }
+
+    #countdown-number {
+        font-size: 6rem;
+        font-weight: 900;
+        color: #fff;
+        line-height: 1;
+        text-shadow: 0 0 30px rgba(99, 102, 241, 0.9), 0 0 60px rgba(99, 102, 241, 0.5);
+        animation: countPulse 0.9s ease-out;
+    }
+
+    @keyframes countPulse {
+        0% {
+            transform: scale(1.4);
+            opacity: 0.3;
         }
 
-        #video {
-            border: 2px solid #333;
-            border-radius: 5px;
-            width: 100%;
-            max-width: 500px;
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    #shot-label {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #10b981;
+        letter-spacing: 0.05em;
+    }
+
+    /* ── Ring Progress ── */
+    .ring-progress-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 0.75rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .ring-svg {
+        width: 52px;
+        height: 52px;
+    }
+
+    .ring-bg {
+        fill: none;
+        stroke: var(--border);
+        stroke-width: 5;
+    }
+
+    .ring-fill {
+        fill: none;
+        stroke: var(--primary);
+        stroke-width: 5;
+        stroke-linecap: round;
+        stroke-dasharray: 138.2;
+        stroke-dashoffset: 138.2;
+        transform: rotate(-90deg);
+        transform-origin: center;
+        transition: stroke-dashoffset 0.3s ease;
+    }
+
+    .ring-text {
+        position: absolute;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        text-align: center;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    .ring-container {
+        position: relative;
+        width: 52px;
+        height: 52px;
+        flex-shrink: 0;
+    }
+
+    .ring-info {
+        flex: 1;
+    }
+
+    .ring-info .ring-title {
+        font-weight: 700;
+        font-size: 0.88rem;
+        color: var(--text-primary);
+    }
+
+    .ring-info .ring-sub {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+
+    #camera-status-bar {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+    }
+
+    /* ── Camera Actions ── */
+    .camera-actions {
+        padding: 0.85rem 1.25rem;
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    #auto-capture-btn {
+        flex: 1;
+        min-width: 180px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        border: none;
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.88rem;
+        padding: 0.6rem 1.25rem;
+        border-radius: 10px;
+        transition: all 0.25s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+    }
+
+    #auto-capture-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    }
+
+    #auto-capture-btn:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* ── Thumbnails ── */
+    .thumb-strip {
+        display: flex;
+        gap: 6px;
+        padding: 0.75rem 1.25rem;
+        flex-wrap: wrap;
+        border-top: 1px solid var(--border);
+        min-height: 64px;
+        align-items: center;
+    }
+
+    .thumb-img {
+        width: 64px;
+        height: 48px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 2px solid var(--primary);
+        animation: thumbPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes thumbPop {
+        from {
+            opacity: 0;
+            transform: scale(0.5);
         }
 
-        #canvas {
-            display: none;
+        to {
+            opacity: 1;
+            transform: scale(1);
         }
+    }
 
-        .thumb-container {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
+    .thumb-empty-msg {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin: auto;
+    }
 
-        .thumb-img {
-            width: 80px;
-            height: 60px;
-            object-fit: cover;
-            border: 2px solid #28a745;
-            border-radius: 4px;
-        }
-    </style>
-</head>
+    /* ── Upload Zone ── */
+    .upload-zone {
+        border: 2px dashed var(--border);
+        border-radius: 12px;
+        padding: 2rem 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+    }
 
-<body>
+    .upload-zone:hover {
+        border-color: var(--primary);
+        background: var(--primary-soft);
+    }
 
-    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-                🏫 <span>HR Attendance</span>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto gap-2">
-                    <li class="nav-item"><a class="nav-link" href="/">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/employees">Employees</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="/add_employee">Add Employee</a></li>
-                    <li class="nav-item ms-md-3">
-                        <a class="btn btn-danger btn-sm d-flex align-items-center gap-2 px-3 h-100" href="/logout">
-                            <span>Logout</span> 🔒
-                        </a>
-                    </li>
-                </ul>
+    .upload-zone i {
+        font-size: 2.5rem;
+        color: var(--text-muted);
+    }
+
+    .upload-zone p {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin: 0.5rem 0 0;
+    }
+
+    .upload-zone input[type=file] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    /* ── Save Button ── */
+    .save-btn {
+        width: 100%;
+        padding: 0.875rem;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        border: none;
+        border-radius: 12px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1rem;
+        letter-spacing: 0.02em;
+        transition: all 0.25s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .save-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45);
+    }
+
+    /* ── Auto-ID Notice ── */
+    .auto-id-notice {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        background: var(--primary-soft);
+        color: var(--primary);
+        font-size: 0.82rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex align-items-center gap-3 mb-4">
+    <div
+        style="width:42px;height:42px;background:var(--primary-soft);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+        <i class="bi bi-person-plus" style="color:var(--primary);font-size:1.25rem;"></i>
+    </div>
+    <div>
+        <h4 class="mb-0 fw-bold">Register New Employee</h4>
+        <p class="mb-0" style="font-size:0.8rem;color:var(--text-muted);">Fill in the details and capture face training
+            photos</p>
+    </div>
+</div>
+
+<form method="POST" action="/add_employee" enctype="multipart/form-data" id="employeeForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="add-emp-grid">
+        <!-- LEFT: Employee Info -->
+        <div>
+            <div class="camera-panel">
+                <div class="camera-panel-header">
+                    <h6><i class="bi bi-person-badge" style="color:var(--primary);"></i> Employee Information</h6>
+                </div>
+                <div class="p-3 p-sm-4">
+                    <p class="section-label"><i class="bi bi-file-person"></i>Basic Details</p>
+
+                    <div class="field-group">
+                        <label><i class="bi bi-person"></i> Full Name</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Ahmed Ali" required>
+                    </div>
+                    <div class="field-group">
+                        <label><i class="bi bi-envelope"></i> Email Address</label>
+                        <input type="email" name="email" class="form-control" placeholder="e.g. ahmed@company.com"
+                            required>
+                    </div>
+                    <p class="section-label mt-3"><i class="bi bi-building"></i>Department</p>
+
+                    <div class="field-group">
+                        <label><i class="bi bi-diagram-3"></i> Department</label>
+                        <select name="department" class="form-select">
+                            <option value="General">General</option>
+                            <option value="Administration">Administration</option>
+                            <option value="Human Resources">Human Resources</option>
+                            <option value="Information Technology">Information Technology</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Sales">Sales</option>
+                            <option value="Operations">Operations</option>
+                            <option value="Engineering">Engineering</option>
+                            <option value="Security">Security</option>
+                            <option value="Maintenance">Maintenance</option>
+                        </select>
+                    </div>
+                </div>
             </div>
         </div>
-    </nav>
 
-    <div class="container mt-5 mb-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
-                        <h4 class="mb-0">➕ Register New Employee</h4>
+        <!-- RIGHT: Face Training -->
+        <div>
+            <div class="camera-panel">
+                <div class="camera-panel-header">
+                    <h6><i class="bi bi-camera-video" style="color:var(--success,#10b981);"></i> Face Training Data</h6>
+                    <div class="mode-tabs">
+                        <button type="button" class="mode-tab active" id="tab-upload" onclick="showUpload()">
+                            <i class="bi bi-upload me-1"></i>Upload
+                        </button>
+                        <button type="button" class="mode-tab" id="tab-camera" onclick="showCamera()">
+                            <i class="bi bi-camera me-1"></i>Camera
+                        </button>
                     </div>
-                    <div class="card-body">
+                </div>
 
-                        {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                        {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">{{ message }}</div>
-                        {% endfor %}
-                        {% endif %}
-                        {% endwith %}
-
-                        <form method="POST" action="/add_employee" enctype="multipart/form-data" id="studentForm">
-                            <div class="mb-3">
-                                <label class="form-label">Full Name</label>
-                                <input type="text" name="name" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Employee ID / Code</label>
-                                <input type="text" name="code" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Email Address</label>
-                                <input type="email" name="email" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Department</label>
-                                <select name="department" class="form-select">
-                                    <option value="General">General</option>
-                                    <option value="IT">IT</option>
-                                    <option value="HR">HR</option>
-                                    <option value="Sales">Sales</option>
-                                    <option value="Marketing">Marketing</option>
-                                </select>
-                            </div>
-
-                            <hr>
-                            <label class="form-label fw-bold">Training Data</label>
-                            <div class="d-flex gap-2 mb-3">
-                                <button type="button" class="btn btn-outline-primary" onclick="showUpload()">📁 Upload
-                                    Files</button>
-                                <button type="button" class="btn btn-outline-success" onclick="showCamera()">📷 Live
-                                    Capture</button>
-                            </div>
-
-                            <div id="upload-section" class="mb-3">
-                                <label class="form-label">Upload multiple photos</label>
-                                <input type="file" name="photos" class="form-control" accept="image/*" multiple>
-                            </div>
-
-                            <div id="camera-section" class="text-center mb-3">
-                                <div class="alert alert-info">
-                                    💡 <strong>Instructions:</strong> Click the button 5 times. Change your angle
-                                    slightly each time.
-                                </div>
-                                <video id="video" autoplay playsinline></video>
-                                <br>
-
-                                <button type="button" class="btn btn-warning mt-2 px-5" id="snapBtn"
-                                    onclick="captureManual()">
-                                    📸 Snap Photo (0/5)
-                                </button>
-                                <button type="button" class="btn btn-secondary mt-2" onclick="resetCapture()">🔄
-                                    Reset</button>
-
-                                <canvas id="canvas" width="640" height="480"></canvas>
-
-                                <div id="thumbnails-preview" class="thumb-container"></div>
-
-                                <div id="hidden-inputs-container"></div>
-                            </div>
-
-                            <div class="d-grid mt-4">
-                                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">Save
-                                    Employee</button>
-                            </div>
-                        </form>
+                <!-- Upload Section -->
+                <div id="upload-section" class="p-3 p-sm-4">
+                    <p class="section-label"><i class="bi bi-images"></i>Photo Upload</p>
+                    <div class="upload-zone position-relative" id="drop-zone">
+                        <input type="file" name="photos" accept="image/*" multiple id="fileUploadInput">
+                        <i class="bi bi-cloud-upload"></i>
+                        <p>Drag & drop photos here<br><small id="upload-status-text" style="color:var(--text-muted);">or click to browse — select multiple face photos</small></p>
                     </div>
+                    <div id="upload-preview" class="thumb-strip mt-3" style="display: none; border-top: none; padding: 0;"></div>
+                </div>
+
+                <!-- Camera Section -->
+                <div id="camera-section">
+                    <div class="video-container">
+                        <video id="video" autoplay playsinline muted></video>
+                        <div id="countdown-overlay">
+                            <span id="countdown-number">3</span>
+                            <span id="shot-label">Get ready...</span>
+                        </div>
+                        <div class="corner-bracket tl"></div>
+                        <div class="corner-bracket tr"></div>
+                        <div class="corner-bracket bl"></div>
+                        <div class="corner-bracket br"></div>
+                    </div>
+
+                    <div class="ring-progress-wrap">
+                        <div class="ring-container">
+                            <svg class="ring-svg" viewBox="0 0 48 48">
+                                <circle class="ring-bg" cx="24" cy="24" r="22" />
+                                <circle class="ring-fill" id="ringFill" cx="24" cy="24" r="22" />
+                            </svg>
+                            <div class="ring-text"><span id="snap-count">0</span>/5</div>
+                        </div>
+                        <div class="ring-info">
+                            <div class="ring-title">Face Captures</div>
+                            <div class="ring-sub" id="camera-status-bar">Ready — click Auto Capture to begin</div>
+                        </div>
+                        <div id="camera-status"></div>
+                    </div>
+
+                    <div class="camera-actions">
+                        <button type="button" id="auto-capture-btn" onclick="autoCapture()">
+                            <i class="bi bi-camera-video-fill"></i> Auto Capture 5 Photos
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="captureSingle()"
+                            id="snapBtn" title="Take one photo manually">
+                            <i class="bi bi-camera"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetCapture()"
+                            title="Reset">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                    </div>
+
+                    <div class="thumb-strip" id="thumbnails-preview">
+                        <span class="thumb-empty-msg">No photos yet — use Auto Capture or Manual</span>
+                    </div>
+                    <div id="hidden-inputs-container"></div>
+                    <canvas id="canvas" width="640" height="480"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const thumbContainer = document.getElementById('thumbnails-preview');
-        const hiddenInputsContainer = document.getElementById('hidden-inputs-container');
-        const snapBtn = document.getElementById('snapBtn');
+    <!-- Save Button -->
+    <div class="mt-4">
+        <button type="submit" class="save-btn">
+            <i class="bi bi-check-circle-fill"></i> Save Employee
+        </button>
+    </div>
+</form>
+{% endblock %}
 
-        let stream = null;
-        let captureCount = 0;
-        const maxCaptures = 5;
+{% block scripts %}
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const thumbContainer = document.getElementById('thumbnails-preview');
+    const hiddenInputsContainer = document.getElementById('hidden-inputs-container');
+    const snapBtn = document.getElementById('snapBtn');
+    const autoCaptureBtn = document.getElementById('auto-capture-btn');
+    const countdownOverlay = document.getElementById('countdown-overlay');
+    const countdownNumber = document.getElementById('countdown-number');
+    const shotLabel = document.getElementById('shot-label');
+    const snapCount = document.getElementById('snap-count');
+    const statusBar = document.getElementById('camera-status-bar');
+    const ringFill = document.getElementById('ringFill');
+    const RING_CIRC = 138.2;
+    let stream = null, captureCount = 0;
+    const maxCaptures = 5;
 
-        function showUpload() {
-            document.getElementById('upload-section').style.display = 'block';
-            document.getElementById('camera-section').style.display = 'none';
-            stopCamera();
+    function setRing(n) {
+        const offset = RING_CIRC - (n / maxCaptures) * RING_CIRC;
+        ringFill.style.strokeDashoffset = offset;
+        snapCount.textContent = n;
+        if (n >= maxCaptures) {
+            ringFill.style.stroke = '#10b981';
+            statusBar.textContent = '✅ All 5 photos captured!';
+        }
+    }
+
+    function showUpload() {
+        document.getElementById('upload-section').style.display = 'block';
+        document.getElementById('camera-section').style.display = 'none';
+        document.getElementById('tab-upload').classList.add('active');
+        document.getElementById('tab-camera').classList.remove('active');
+        stopCamera();
+    }
+
+    function showCamera() {
+        document.getElementById('upload-section').style.display = 'none';
+        document.getElementById('camera-section').style.display = 'block';
+        document.getElementById('tab-camera').classList.add('active');
+        document.getElementById('tab-upload').classList.remove('active');
+        startCamera();
+    }
+
+    async function startCamera() {
+        statusBar.textContent = 'Connecting to camera...';
+        try {
+            if (stream) stopCamera();
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            video.srcObject = stream;
+            video.onloadedmetadata = () => { video.play().catch(e => console.warn(e)); };
+            setTimeout(() => { if (video.paused && video.srcObject) video.play().catch(() => { }); }, 500);
+            statusBar.textContent = '🟢 Camera active — ready to capture';
+            resetCapture();
+        } catch (e) {
+            let msg = 'Camera error: ' + e.message;
+            if (e.name === 'NotAllowedError') msg = '🔒 Permission denied — allow camera in browser settings';
+            if (e.name === 'NotFoundError') msg = '📷 No camera found on this device';
+            if (e.name === 'NotReadableError') msg = '⚠️ Camera in use — close other apps using the camera';
+            statusBar.textContent = msg;
+            statusBar.style.color = '#ef4444';
+        }
+    }
+
+    function stopCamera() {
+        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    }
+
+    function resetCapture() {
+        captureCount = 0;
+        thumbContainer.innerHTML = '<span class="thumb-empty-msg">No photos yet — use Auto Capture or Manual</span>';
+        hiddenInputsContainer.innerHTML = '';
+        setRing(0);
+        ringFill.style.stroke = 'var(--primary)';
+        snapBtn.disabled = false;
+        autoCaptureBtn.disabled = false;
+        autoCaptureBtn.innerHTML = '<i class="bi bi-camera-video-fill"></i> Auto Capture 5 Photos';
+        autoCaptureBtn.style.background = 'linear-gradient(135deg, #6366f1, #8b5cf6)';
+        if (stream) statusBar.textContent = '🟢 Camera active — ready to capture';
+    }
+
+    function takeSingleFrame() {
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataURL = canvas.toDataURL('image/jpeg');
+        captureCount++;
+
+        const emptyMsg = thumbContainer.querySelector('.thumb-empty-msg');
+        if (emptyMsg) emptyMsg.remove();
+
+        const img = document.createElement('img');
+        img.src = dataURL; img.className = 'thumb-img';
+        thumbContainer.appendChild(img);
+
+        const input = document.createElement('input');
+        input.type = 'hidden'; input.name = 'captured_photos'; input.value = dataURL;
+        hiddenInputsContainer.appendChild(input);
+
+        setRing(captureCount);
+    }
+
+    function captureSingle() {
+        if (!stream) { statusBar.textContent = '⚠️ Camera not started'; return; }
+        if (captureCount >= maxCaptures) return;
+        takeSingleFrame();
+        if (captureCount >= maxCaptures) { snapBtn.disabled = true; autoCaptureBtn.disabled = true; }
+    }
+
+    async function autoCapture() {
+        if (!stream) { statusBar.textContent = '⚠️ Camera not started'; return; }
+        if (captureCount >= maxCaptures) return;
+
+        autoCaptureBtn.disabled = true;
+        snapBtn.disabled = true;
+        autoCaptureBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Starting...';
+
+        countdownOverlay.style.display = 'flex';
+        for (let c = 3; c >= 1; c--) {
+            countdownNumber.textContent = c;
+            shotLabel.textContent = 'Get ready...';
+            countdownNumber.style.animation = 'none';
+            countdownNumber.offsetHeight;
+            countdownNumber.style.animation = '';
+            await new Promise(r => setTimeout(r, 900));
         }
 
-        function showCamera() {
-            document.getElementById('upload-section').style.display = 'none';
-            document.getElementById('camera-section').style.display = 'block';
-            startCamera();
+        const remaining = maxCaptures - captureCount;
+        for (let i = 0; i < remaining; i++) {
+            countdownNumber.textContent = '📸';
+            shotLabel.textContent = 'Photo ' + (captureCount + 1) + ' of ' + maxCaptures;
+            takeSingleFrame();
+            countdownOverlay.style.background = 'rgba(255,255,255,0.2)';
+            await new Promise(r => setTimeout(r, 120));
+            countdownOverlay.style.background = 'rgba(0,0,0,0.65)';
+            if (i < remaining - 1) await new Promise(r => setTimeout(r, 650));
         }
 
-        async function startCamera() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-                resetCapture();
-            } catch (err) {
-                alert("Error accessing camera: " + err);
-            }
+        countdownOverlay.style.display = 'none';
+        autoCaptureBtn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Done — 5 Photos Captured!';
+        autoCaptureBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+    }
+
+    // --- File Upload Preview Logic ---
+    const fileUploadInput = document.getElementById('fileUploadInput');
+    const uploadPreview = document.getElementById('upload-preview');
+    const uploadStatusText = document.getElementById('upload-status-text');
+
+    fileUploadInput.addEventListener('change', function(e) {
+        uploadPreview.innerHTML = '';
+        let files = Array.from(e.target.files);
+        
+        if (files.length > 5) {
+            alert('You can only upload a maximum of 5 photos for face training. The system has automatically kept your first 5 selections.');
+            const dt = new DataTransfer();
+            files.slice(0, 5).forEach(f => dt.items.add(f));
+            e.target.files = dt.files;
+            files = Array.from(e.target.files);
         }
-
-        function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-            }
+        
+        if (files.length > 0) {
+            uploadPreview.style.display = 'flex';
+            uploadStatusText.innerHTML = `<span style="color:var(--success);"><i class="bi bi-check-circle-fill"></i> ${files.length} photo(s) selected (Max 5)</span>`;
+            
+            files.forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const img = document.createElement('img');
+                    img.src = evt.target.result;
+                    img.className = 'thumb-img';
+                    uploadPreview.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            });
+        } else {
+            uploadPreview.style.display = 'none';
+            uploadStatusText.innerHTML = 'or click to browse — select multiple face photos (Max 5)';
         }
+    });
 
-        function resetCapture() {
-            captureCount = 0;
-            thumbContainer.innerHTML = '';
-            hiddenInputsContainer.innerHTML = '';
-            snapBtn.innerText = `📸 Snap Photo (0/${maxCaptures})`;
-            snapBtn.disabled = false;
-            snapBtn.classList.remove('btn-success');
-            snapBtn.classList.add('btn-warning');
-        }
-
-        // هذه الدالة تعمل عند ضغط الزر يدوياً
-        function captureManual() {
-            if (captureCount >= maxCaptures) return;
-
-            const context = canvas.getContext('2d');
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataURL = canvas.toDataURL('image/jpeg');
-
-            // زيادة العداد
-            captureCount++;
-
-            // إضافة صورة مصغرة
-            const img = document.createElement('img');
-            img.src = dataURL;
-            img.className = 'thumb-img';
-            thumbContainer.appendChild(img);
-
-            // إضافة حقل مخفي
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'captured_photos';
-            input.value = dataURL;
-            hiddenInputsContainer.appendChild(input);
-
-            // تحديث حالة الزر
-            if (captureCount < maxCaptures) {
-                snapBtn.innerText = `📸 Snap Photo (${captureCount}/${maxCaptures})`;
-            } else {
-                snapBtn.innerText = `✅ Done (${maxCaptures} Photos)`;
-                snapBtn.disabled = true; // تعطيل الزر عند الوصول للحد الأقصى
-                snapBtn.classList.remove('btn-warning');
-                snapBtn.classList.add('btn-success');
-            }
-        }
-    </script>
-
-</body>
-
-</html>
+    // Optional drag-and-drop styling
+    const dropZone = document.getElementById('drop-zone');
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--primary)'; dropZone.style.background = 'var(--primary-soft)'; });
+    dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; dropZone.style.background = ''; });
+    dropZone.addEventListener('drop', () => { dropZone.style.borderColor = ''; dropZone.style.background = ''; });
+</script>
+{% endblock %}
